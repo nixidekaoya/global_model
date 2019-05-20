@@ -1,0 +1,65 @@
+,Index,ItemID,ItemName
+0,0,1,Bag
+1,1,5,Shoes
+2,2,6,Slipper
+3,3,7,Mirror
+4,4,11,Bed
+5,5,20,Bottle
+6,6,30,Plate
+7,7,31,Brush
+8,8,37,Rubber
+9,9,39,Towel
+10,10,46,Water Bottle
+11,11,53,Sketch Pen
+12,12,56,Key Chain
+13,13,70,Tape
+14,14,71,Box
+15,15,94,Whiteboard
+16,16,95,Marker Pen
+17,17,110,Floor Sweeper
+18,18,136,Cup
+19,19,139,Teapot
+20,20,145,Trash Bin
+21,21,160,Spray
+22,22,163,Tissue
+23,23,169,Stamp
+24,24,179,Wallet
+25,25,185,Scissors
+26,26,188,Toothbrush
+27,27,192,Briefcase
+28,28,195,Glasses
+29,29,196,Calender
+30,30,206,Chopsticks
+31,31,209,Umbrella
+32,32,17,Laptop
+33,33,18,Smartphone
+34,34,41,Switch
+35,35,47,Remote
+36,36,48,Air Conditioner
+37,37,51,Smoke detector
+38,38,58,Fridge
+39,39,66,Keyboard
+40,40,67,Mouse
+41,41,69,Cable
+42,42,76,Earphone
+43,43,78,LED
+44,44,79,Adapter
+45,45,100,Projector
+46,46,112,Heat Sink
+47,47,121,Motor
+48,48,125,RAM
+49,49,126,FLASH Memory
+50,50,127,Hard Disk
+51,51,129,Battery
+52,52,130,Microphone
+53,53,131,Camera
+54,54,132,Monitor
+55,55,149,Vending Machine
+56,56,165,Printer
+57,57,167,Heater
+58,58,173,Calculator
+59,59,175,Desktop
+60,60,176,Television
+61,61,204,Microwave
+62,62,210,Rice Cooker
+63,63,211,Induction Cooker

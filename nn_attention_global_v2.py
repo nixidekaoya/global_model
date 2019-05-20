@@ -13,6 +13,7 @@ import torch.nn as nn
 import torch.autograd as autograd
 import torch.nn.functional as F
 import torch.optim as optim
+import torch.nn.init as init
 
 from torch.autograd import Variable
 from torch.utils.data.dataset import Dataset
@@ -22,57 +23,52 @@ from torchvision import transforms
 
 ############### Dataset Class #####################
 class GlobalModelDataset(Dataset):
-    def __init__(self,csv_path,item_list):
-        self.csv_data = pd.read_csv(csv_path)
-        self.item_list = item_list
-        self.item_index_dic = {}
+    def __init__(self,input_csv,output_csv):
+        self.input_data = pd.read_csv(input_csv)
+        self.output_data = pd.read_csv(output_csv)
+
         
-        self.to_tensor = transforms.ToTensor()
-        self.item_number = len(self.item_list)
-        self.item_each = 8
-        self.data_num = int(len(self.csv_data)/self.item_each)
-        self.output_dim = int((self.item_number * (self.item_number - 1))/2)
+        self.item_list = list(self.input_data.columns)[1:]
+        self.item_index_dic = {}
+
         self.input_list = []
         self.output_list = []
 
+        for index,row in self.input_data.iterrows():
+            self.input_list.append(list(row)[1:])
+
+        for index,row in self.output_data.iterrows():
+            output = list(row)[1:]
+
+            #NaN to 0
+            for i in range(len(output)):
+                if np.isnan(output[i]):
+                    output[i] = float(0)
+            
+            self.output_list.append(output)
+
+            
+            
+        
+        self.item_number = len(self.item_list)
+        self.item_each = 8
+        self.data_num = len(self.input_list)
+        self.output_dim = len(self.output_list[0])
+
+        self.com_list = []
+
+        com = itertools.combinations(range(self.item_number),2)
+        for c in com:
+            self.com_list.append(c)
+
+
         for i in range(self.item_number):
             self.item_index_dic[str(self.item_list[i])] = int(i)
-
-        for i in range(1, self.data_num + 1):
-            data = self.csv_data.loc[self.csv_data["RecordID"] == i]
-            input_array = np.zeros(self.item_number)
-            output_matrix = np.zeros([self.item_number,self.item_number], dtype = float)
-
-            item_name_list = []
-            Xcoordinate_list = []
-            Ycoordinate_list = []
-            for index,row in data.iterrows():
-                item_name_list.append(str(row["ItemName"]))
-                Xcoordinate_list.append(float(row["X-Coordinate"]))
-                Ycoordinate_list.append(float(row["Y-Coordinate"]))
-
-
-            for i in range(len(item_name_list)):
-                input_array[self.item_index_dic[str(item_name_list[i])]] = 1
-                for j in range(1,len(item_name_list) - i):
-                    c1 = (Xcoordinate_list[i], Ycoordinate_list[i])
-                    c2 = (Xcoordinate_list[i+j], Ycoordinate_list[i+j])
-                    output_matrix[self.item_index_dic[str(item_name_list[i])], self.item_index_dic[str(item_name_list[i+j])]] = float(self.get_distance(c1,c2))
-                    output_matrix[self.item_index_dic[str(item_name_list[i+j])], self.item_index_dic[str(item_name_list[i])]] = output_matrix[self.item_index_dic[str(item_name_list[i])],self.item_index_dic[str(item_name_list[i+j])]]
-
-            output_array = []
-            for i in range(1,self.item_number):
-                for j in range(self.item_number - i):
-                    output_array.append(output_matrix[j,j+i])
-
-            self.input_list.append(np.array(input_array))
-            self.output_list.append(np.array(output_array))
-                    
                 
 
     def __getitem__(self,index):
-        input_item = torch.from_numpy(self.input_list[index]).float()
-        output_item = torch.from_numpy(self.output_list[index]).float()
+        input_item = torch.from_numpy(np.array(self.input_list[index])).float()
+        output_item = torch.from_numpy(np.array(self.output_list[index])).float()
 
         return input_item,output_item
 
@@ -115,23 +111,48 @@ class GlobalModelDataset(Dataset):
     def get_parameters(self):
         return (self.item_number , self.item_each , self.data_num , self.output_dim)
 
+    def from_index_get_ij(self,index):
+        if int(index) < len(self.com_list) and int(index) >= 0:
+            return self.com_list[int(index)]
+        else:
+            return -1
 
+    def from_ij_get_index(self,i,j):
+        if int(i) > int(j):
+            ij = (int(j),int(i))
+        else:
+            ij = (int(i),int(j))
+        if ij in self.com_list:
+            return self.com_list.index(ij)
+        else:
+            return -1
+            
         
 
 ##################### Attention Net Class #######################
 class Attention_Net(nn.Module):
-    def __init__(self,item_list):
+    def __init__(self,dataset,params = (5,10,8)):
         super(Attention_Net,self).__init__()
-        self.item_list = item_list
-        self.item_number = len(item_list)
+        self.dataset = dataset
+        self.item_list = dataset.item_list
+        self.item_number = len(self.item_list)
         self.output_dim = int((self.item_number * (self.item_number - 1))/2)
-        self.query_dim = 5
-        self.key_dim = 10
-        self.feature_dim = 8
+
+        self.query_dim = int(params[0])
+        self.key_dim = int(params[1])
+        self.feature_dim = int(params[2])
         self.linear_layer1 = nn.Linear(self.item_number,self.query_dim)
         self.key_matrix = torch.nn.Parameter(torch.randn(self.query_dim,self.key_dim))
         self.value_matrix = torch.nn.Parameter(torch.randn(self.key_dim,self.feature_dim))
         self.linear_layer2 = nn.Linear(self.feature_dim, self.output_dim)
+
+        #Initialization
+        init.xavier_uniform(self.linear_layer1.weight)
+        init.xavier_uniform(self.linear_layer2.weight)
+        init.normal(self.linear_layer1.bias,mean = 0,std = 1)
+        init.normal(self.linear_layer2.bias,mean = 0,std = 1)
+        
+        
         
 
     def forward(self,x):
@@ -147,7 +168,6 @@ class Attention_Net(nn.Module):
         x = x.mm(self.value_matrix)
 
         #Decoder
-        
         x = self.linear_layer2(x)
         x = x.mul(mask)
 
@@ -164,27 +184,34 @@ class Attention_Net(nn.Module):
         
         for batch in x:
             sub_mask = []
-            for i in range(1,self.item_number):
-                for j in range(self.item_number - i):
-                    if int(batch[j]) == 1 and int(batch[j+i]) == 1:
-                        sub_mask.append(float(1))
-                    else:
-                        sub_mask.append(float(0))
+            for com in self.dataset.com_list:
+                i = com[0]
+                j = com[1]
+                if int(batch[i]) == 1 and int(batch[j]) == 1:
+                    sub_mask.append(1)
+                else:
+                    sub_mask.append(0)
+
             mask.append(sub_mask)
         mask = torch.from_numpy(np.array(mask)).float()
         #print(mask.shape)
         return mask
 
-    def get_output_matrix(self, output):
+    def get_output_matrix(self, output, pandas = False):
         
         output = list(output[0].detach().numpy())
         #print(len(output))
         output_matrix = np.zeros([self.item_number,self.item_number], dtype = float)
-        for i in range(1, self.item_number):
-            for j in range(self.item_number - i):
-                output_matrix[j,j+i] = float(output.pop(0))
-                output_matrix[i+j,j] = output_matrix[j,j+i]
-        return torch.from_numpy(output_matrix)
+        for com in self.dataset.com_list:
+            i = com[0]
+            j = com[1]
+            output_matrix[i,j] = output[dataset.from_ij_get_index(i,j)]
+            output_matrix[j,i] = output_matrix[i,j]
+
+        if pandas == False:
+            return torch.from_numpy(output_matrix)
+        else:
+            return pd.DataFrame(output_matrix, columns = self.item_list, index = self.item_list)
 
 
                 
@@ -195,6 +222,9 @@ group_path = "/home/li/datasets/lifelog/Group1_64.txt"
 group_list = []
 group_item_name_list = []
 
+input_csv = "/home/li/torch/data/Data_Input_100_LI_Mofei_20190518.csv"
+output_csv = "/home/li/torch/data/Data_Output_100_LI_Mofei_20190518.csv"
+
 
 
 with open(group_path,"r") as g_f:
@@ -204,8 +234,11 @@ with open(group_path,"r") as g_f:
 
 ################## PARAMS
 
-BATCH_SIZE = 5
-LEARNING_RATE = 0.05
+BATCH_SIZE = 2
+LEARNING_RATE = 0.03
+QUERY_DIM = 5
+KEY_DIM = 10
+VALUE_DIM = 8
 
 
 
@@ -215,10 +248,14 @@ if __name__ == '__main__':
 
     
     name_list = group_item_name_list
-    attention_net = Attention_Net(name_list)
+    
     input_dim = len(name_list)
 
-    dataset = GlobalModelDataset(data_file_path, name_list)
+    dataset = GlobalModelDataset(input_csv, output_csv)
+    print(dataset.get_parameters())
+    params = (QUERY_DIM,KEY_DIM,VALUE_DIM)
+    attention_net = Attention_Net(dataset,params)
+    
     dataloader = DataLoader(dataset = dataset,
                             batch_size = BATCH_SIZE,
                             shuffle = True,
@@ -236,9 +273,10 @@ if __name__ == '__main__':
 
     print(dataloader)
     loss = 0
-    for epoach in range(50):
+    for epoach in range(100):
         for im,label in dataloader:
             out = attention_net.forward(im)
+            #print(im.shape)
             #print(out.shape)
             #print(label.shape)
             loss = loss_function(out,label)
@@ -247,6 +285,13 @@ if __name__ == '__main__':
             optimizer.step()
 
         print(loss.item())
+
+
+    final_input = torch.from_numpy(np.ones(input_dim)).float().unsqueeze(0)
+    final_output = attention_net.forward(final_input)
+    final_matrix = attention_net.get_output_matrix(final_output,pandas = True)
+    final_matrix.to_csv("/home/li/torch/result/test_result.csv")
+    print(final_matrix)
 
     
 
