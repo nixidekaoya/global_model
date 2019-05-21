@@ -44,6 +44,8 @@ class GlobalModelDataset(Dataset):
             for i in range(len(output)):
                 if np.isnan(output[i]):
                     output[i] = float(0)
+                else:
+                    output[i] = math.log(output[i])
             
             self.output_list.append(output)
 
@@ -54,6 +56,8 @@ class GlobalModelDataset(Dataset):
         self.item_each = 8
         self.data_num = len(self.input_list)
         self.output_dim = len(self.output_list[0])
+
+        #print(self.data_num)
 
         self.com_list = []
 
@@ -197,7 +201,31 @@ class Attention_Net(nn.Module):
         #print(mask.shape)
         return mask
 
-    def get_output_matrix(self, output, pandas = False):
+    def get_output_mask(self,x):
+
+        mask = []
+        x = x.data.numpy()
+
+        
+        for batch in x:
+            sub_mask = []
+            for com in self.dataset.com_list:
+                i = com[0]
+                j = com[1]
+                if int(batch[i]) == 1 and int(batch[j]) == 1:
+                    sub_mask.append(1)
+                else:
+                    sub_mask.append(np.nan)
+
+            mask.append(sub_mask)
+        mask = torch.from_numpy(np.array(mask)).float()
+        #print(mask.shape)
+        return mask
+
+    def get_output_matrix(self, inp, output, pandas = False):
+
+        output_mask = self.get_output_mask(inp)
+        output = output.mul(output_mask)
         
         output = list(output[0].detach().numpy())
         #print(len(output))
@@ -205,7 +233,7 @@ class Attention_Net(nn.Module):
         for com in self.dataset.com_list:
             i = com[0]
             j = com[1]
-            output_matrix[i,j] = output[dataset.from_ij_get_index(i,j)]
+            output_matrix[i,j] = math.exp(output[dataset.from_ij_get_index(i,j)])
             output_matrix[j,i] = output_matrix[i,j]
 
         if pandas == False:
@@ -214,7 +242,16 @@ class Attention_Net(nn.Module):
             return pd.DataFrame(output_matrix, columns = self.item_list, index = self.item_list)
 
 
-                
+
+
+########### FUNCTIONS
+
+def l1_penalty(var):
+    return torch.abs(var).sum()
+
+def l2_penalty(var):
+    return torch.sqrt(torch.pow(var,2).sum())
+
 ##########################################################################
 lifelog_itemlist = "/home/li/datasets/lifelog/itemlist.csv"
 lifelog_data = pd.read_csv(lifelog_itemlist)
@@ -222,8 +259,10 @@ group_path = "/home/li/datasets/lifelog/Group1_64.txt"
 group_list = []
 group_item_name_list = []
 
-input_csv = "/home/li/torch/data/Data_Input_100_LI_Mofei_20190518.csv"
-output_csv = "/home/li/torch/data/Data_Output_100_LI_Mofei_20190518.csv"
+input_csv = "/home/li/torch/data/Data_Input_200_LI_Mofei_20190518.csv"
+output_csv = "/home/li/torch/data/Data_Output_200_LI_Mofei_20190518.csv"
+
+
 
 
 
@@ -234,33 +273,53 @@ with open(group_path,"r") as g_f:
 
 ################## PARAMS
 
-BATCH_SIZE = 2
-LEARNING_RATE = 0.03
+BATCH_SIZE = 1
+LEARNING_RATE = 0.02
+WEIGHT_DECAY = torch.tensor(0.0001).float()
 QUERY_DIM = 5
 KEY_DIM = 10
-VALUE_DIM = 8
+FEATURE_DIM = 8
 
-
+model_path = "/home/li/torch/model/attention_net_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + ".model"
 
 if __name__ == '__main__':
 
-    data_file_path = "/home/li/datasets/lifelog/data/Group1_li_mofei_no_50_20190512.csv"
-
+    data_file_path = "/home/li/datasets/lifelog/data/Group1_li_mofei_no_20_20190520.csv"
+    user = "li_mofei"
     
     name_list = group_item_name_list
     
     input_dim = len(name_list)
 
     dataset = GlobalModelDataset(input_csv, output_csv)
+
+    data_num = dataset.data_num
+    test_data_num = int(data_num/5)
+    train_data_num = data_num - test_data_num
+
+    train_dataset, test_dataset = torch.utils.data.random_split(dataset, (train_data_num, test_data_num))
     print(dataset.get_parameters())
-    params = (QUERY_DIM,KEY_DIM,VALUE_DIM)
+    params = (QUERY_DIM, KEY_DIM, FEATURE_DIM)
     attention_net = Attention_Net(dataset,params)
     
     dataloader = DataLoader(dataset = dataset,
                             batch_size = BATCH_SIZE,
                             shuffle = True,
                             num_workers = 0)
-    optimizer = torch.optim.SGD(attention_net.parameters(), lr = LEARNING_RATE)
+
+    train_dataloader = DataLoader(dataset = train_dataset,
+                                  batch_size = BATCH_SIZE,
+                                  shuffle = True,
+                                  num_workers = 0)
+
+    test_dataloader = DataLoader(dataset = test_dataset,
+                                 batch_size = BATCH_SIZE,
+                                 shuffle = True,
+                                 num_workers = 0)
+    
+    print(len(dataloader))
+    
+    optimizer = torch.optim.Adam(attention_net.parameters(), lr = LEARNING_RATE)
     loss_function = torch.nn.MSELoss()
 
     for name,param in attention_net.named_parameters():
@@ -270,28 +329,79 @@ if __name__ == '__main__':
 
 
     ###################### Training ###############
+    attention_net.train()
 
+    
     print(dataloader)
-    loss = 0
-    for epoach in range(100):
-        for im,label in dataloader:
+    train_loss_list = []
+    test_loss_list = []
+    for epoach in range(20):
+        train_loss_each = 0
+        test_loss_each = 0
+
+        ## Train
+        for im,label in train_dataloader:
+            l0_regularization = torch.tensor(0).float()
+            l1_regularization = torch.tensor(0).float()
+            l2_regularization = torch.tensor(0).float()
+            
             out = attention_net.forward(im)
             #print(im.shape)
             #print(out.shape)
             #print(label.shape)
-            loss = loss_function(out,label)
+            
+            mse_loss = loss_function(out,label)
+            
+            #print(loss)
+            for param in attention_net.parameters():
+                l1_regularization += WEIGHT_DECAY * torch.norm(param,1)
+                l2_regularization += WEIGHT_DECAY * torch.norm(param,2)
+
+            loss = mse_loss + l1_regularization
+            train_loss_each += loss.item()/train_data_num
+            
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-        print(loss.item())
+        print("Epoach: " + str(epoach) + " , Train Loss: " + str(train_loss_each))
+        train_loss_list.append(train_loss_each)
+
+        ## Test
+        for im,label in test_dataloader:
+            l0_regularization = torch.tensor(0).float()
+            l1_regularization = torch.tensor(0).float()
+            l2_regularization = torch.tensor(0).float()
+            
+            out = attention_net.forward(im)
+            mse_loss = loss_function(out,label)
+            
+            for param in attention_net.parameters():
+                l1_regularization += WEIGHT_DECAY * torch.norm(param,1)
+                l2_regularization += WEIGHT_DECAY * torch.norm(param,2)
 
 
-    final_input = torch.from_numpy(np.ones(input_dim)).float().unsqueeze(0)
-    final_output = attention_net.forward(final_input)
-    final_matrix = attention_net.get_output_matrix(final_output,pandas = True)
-    final_matrix.to_csv("/home/li/torch/result/test_result.csv")
-    print(final_matrix)
+            loss = mse_loss + l1_regularization
+            test_loss_each += loss.item()/test_data_num
+
+        print("Epoach: " + str(epoach) + " , Test Loss: " + str(test_loss_each))
+        test_loss_list.append(test_loss_each)
+            
+        
+
+    torch.save(attention_net, model_path)
+    
+    attention_net.eval()
+    #final_input = torch.from_numpy(np.ones(input_dim)).float().unsqueeze(0)
+    #final_output = attention_net.forward(final_input)
+    #final_matrix = attention_net.get_output_matrix(final_input, final_output,pandas = True)
+    #csv_output_file = "/home/li/torch/result/test_result_" + str(user) + ".csv"
+    #final_matrix.to_csv(csv_output_file)
+    #print(loss_list)
+
+    plt.plot(range(len(train_loss_list)), train_loss_list)
+    plt.plot(range(len(test_loss_list)), test_loss_list)
+    plt.show()
 
     
 

@@ -311,6 +311,7 @@ if __name__ == '__main__':
     print(dataloader)
     loss = 0
     for epoach in range(10):
+        
         for im,label in dataloader:
             im = im.cuda()
             label = label.cuda()
@@ -319,7 +320,7 @@ if __name__ == '__main__':
             #print(im.shape)
             #print(out.shape)
             #print(label.shape)
-            loss = loss_function(out,label)
+            loss += loss_function(out,label)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()

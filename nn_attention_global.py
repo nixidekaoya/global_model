@@ -223,7 +223,7 @@ if __name__ == '__main__':
                             batch_size = BATCH_SIZE,
                             shuffle = True,
                             num_workers = 0)
-    optimizer = torch.optim.SGD(attention_net.parameters(), lr = LEARNING_RATE)
+    optimizer = torch.optim.SGD(attention_net.parameters(), lr = LEARNING_RATE, weight_decay = WEIGHT_DECAY)
     loss_function = torch.nn.MSELoss()
 
     for name,param in attention_net.named_parameters():
