@@ -279,46 +279,9 @@ def get_inter_class_distance(df, class_1_list, class_2_list):
         distance += inter_d
     distance = distance/class_1_num
     return distance
-
-def evaluate_model_inner_inter_distance(model, sample_number, combines = (4,4)):
-    class_1_inner_distance_list = []
-    class_2_inner_distance_list = []
-    inter_distance_list = []
-    class_1_num = combines[0]
-    class_2_num = combines[1]
-    name_list = model.item_list
     
-    for i in range(sample_number):
-        class_1_sample = random.sample(range(32),class_1_num)
-        class_2_sample = random.sample(range(32,64),class_2_num)
-        samples = class_1_sample + class_2_sample
-        sample_name_list = []
-        for i in samples:
-            sample_name_list.append(name_list[i])
-        class_1_name_list = sample_name_list[:class_1_num]
-        class_2_name_list = sample_name_list[class_1_num:]
-        test_input = []
-        for name in name_list:
-            if name in sample_name_list:
-                test_input.append(1)
-            else:
-                test_input.append(0)
-        test_input = torch.from_numpy(np.array(test_input))
-        test_input = test_input.unsqueeze(0).float()
-        test_output = model.forward(test_input)
-        matrix = model.get_output_matrix(test_input, test_output, pandas = True)
-        class_1_inner_distance = get_inner_class_distance(matrix, class_1_name_list)
-        class_2_inner_distance = get_inner_class_distance(matrix, class_2_name_list)
-        inter_distance = get_inter_class_distance(matrix, class_1_name_list, class_2_name_list)
-        class_1_inner_distance_list.append(class_1_inner_distance)
-        class_2_inner_distance_list.append(class_2_inner_distance)
-        inter_distance_list.append(inter_distance)
 
-    class_1_inner_distance = np.mean(class_1_inner_distance_list)
-    class_2_inner_distance = np.mean(class_2_inner_distance_list)
-    inter_distance = np.mean(inter_distance_list)
-    return class_1_inner_distance, class_2_inner_distance, inter_distance
-    
+
 
 ##########################################################################
 lifelog_itemlist = "/home/li/datasets/lifelog/itemlist.csv"
@@ -351,6 +314,8 @@ FEATURE_DIM = 8
 CV_NUM = 5
 
 model_path = "/home/li/torch/model/attention_net_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_CV.model"
+test_csv_file = "/home/li/torch/csv/test_csv.csv"
+
 
 if __name__ == '__main__':
 
@@ -367,127 +332,48 @@ if __name__ == '__main__':
 
     data_num = dataset.data_num
 
-    sample_data_num = int(data_num/CV_NUM)
-
-    train_data_num = data_num - sample_data_num
-    test_data_num = sample_data_num
-
-    splits_list = []
-    for i in range(CV_NUM):
-        splits_list.append(sample_data_num)
-    splits_list = tuple(splits_list)
-
-    datasets = torch.utils.data.random_split(dataset, splits_list)
-
-    dataloader_list = []
-    for ds in datasets:
-        dataloader = DataLoader(dataset = ds,
-                                batch_size = BATCH_SIZE,
-                                shuffle = True,
-                                num_workers = 0)
-        dataloader_list.append(dataloader)
 
     params = (QUERY_DIM, KEY_DIM, FEATURE_DIM)
     attention_net = Attention_Net(dataset,params)
-    
-    
-    optimizer = torch.optim.Adam(attention_net.parameters(), lr = LEARNING_RATE)
-    loss_function = torch.nn.MSELoss()
 
     for name,param in attention_net.named_parameters():
         if param.requires_grad:
             print(name)
             #print(param)
 
+    attention_net_trained = torch.load(model_path)
+    print(attention_net_trained.dataset)
 
-    ###################### Training ############### Cross Validation
-    attention_net.train()
-
-    
-    print(dataloader)
-    train_loss_list = []
-    test_loss_list = []
-    for epoach in range(20):
-        train_loss_each_epoach_list = []
-        test_loss_each_epoach_list = []
-
-        for i in range(CV_NUM):
-            test_dataloader = dataloader_list[i]
-            train_dataloader_list = dataloader_list[:i] + dataloader_list[i+1:]            
-
-            #print(len(train_dataloader_list))
-            ###### Train
-            train_loss_each_sample_list = []
-            for dataloader in train_dataloader_list:
-                
-                train_loss_each = 0
-                for im,label in dataloader:
-                    l0_regularization = torch.tensor(0).float()
-                    l1_regularization = torch.tensor(0).float()
-                    l2_regularization = torch.tensor(0).float()
-
-                    out = attention_net.forward(im)
-                    mse_loss = loss_function(out,label)
-                    for param in attention_net.parameters():
-                        l1_regularization += WEIGHT_DECAY * torch.norm(param,1)
-                        l2_regularization += WEIGHT_DECAY * torch.norm(param,2)
-
-                    loss = mse_loss + l0_regularization
-                    
-                    train_loss_each += loss.item()/sample_data_num
-            
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
-
-                
-                train_loss_each_sample_list.append(train_loss_each)
-                #print(len(train_loss_each_sample_list))
-            #print(len(train_loss_each_sample_list))
-            train_loss_each_epoach_list.append(np.mean(train_loss_each_sample_list))
-
-            ############ Test
-            test_loss_each = 0
-            for im,label in test_dataloader:
-
-                l0_regularization = torch.tensor(0).float()
-                l1_regularization = torch.tensor(0).float()
-                l2_regularization = torch.tensor(0).float()
-            
-                out = attention_net.forward(im)
-                mse_loss = loss_function(out,label)
-            
-                for param in attention_net.parameters():
-                    l1_regularization += WEIGHT_DECAY * torch.norm(param,1)
-                    l2_regularization += WEIGHT_DECAY * torch.norm(param,2)
-
-
-                loss = mse_loss + l0_regularization
-                test_loss_each += loss.item()/sample_data_num
-
-            test_loss_each_epoach_list.append(test_loss_each)
-        print("Epoach: " + str(epoach) + " , Train Loss: " + str(np.mean(train_loss_each_epoach_list)))
-        print("Epoach: " + str(epoach) + " , Test Loss: " + str(np.mean(test_loss_each_epoach_list)))
-                
-        train_loss_list.append(np.mean(train_loss_each_epoach_list))
-        test_loss_list.append(np.mean(test_loss_each_epoach_list))
-        
-
-    torch.save(attention_net, model_path)
-    
-    #attention_net.eval()
-    #final_input = torch.from_numpy(np.ones(input_dim)).float().unsqueeze(0)
-    #final_output = attention_net.forward(final_input)
-    #final_matrix = attention_net.get_output_matrix(final_input, final_output,pandas = True)
-    #csv_output_file = "/home/li/torch/result/test_result_" + str(user) + ".csv"
-    #final_matrix.to_csv(csv_output_file)
-    #print(loss_list)
-
-    plt_file = "/home/li/torch/figure/training_curve_cv.png"
-    plt.plot(range(len(train_loss_list)), train_loss_list ,label = "train loss")
-    plt.plot(range(len(test_loss_list)), test_loss_list ,label = "test loss")
-    plt.legend(loc = 'upper right')
-    plt.savefig(plt_file)
-    plt.show()
+    class_1_sample = random.sample(range(32),4)
+    class_2_sample = random.sample(range(32,64),4)
+    samples = class_1_sample + class_2_sample
+    sample_name_list = []
+    for i in samples:
+        sample_name_list.append(name_list[i])
+    print(sample_name_list)
+    class_1_name_list = sample_name_list[:4]
+    class_2_name_list = sample_name_list[4:]
+    test_input = []
+    for name in name_list:
+        if name in sample_name_list:
+            test_input.append(1)
+        else:
+            test_input.append(0)
+    test_input = torch.from_numpy(np.array(test_input))
+    test_input = test_input.unsqueeze(0).float()
+    print(test_input.shape)
+    test_output = attention_net_trained.forward(test_input)
+    matrix = attention_net_trained.get_output_matrix(test_input,test_output, pandas = True)
+    matrix.to_csv(test_csv_file)
+    #print(matrix.loc[class_1_name_list[1]])
+    #print(itertools.combinations(class_1_name_list,2))
+    inner_distance_1 = get_inner_class_distance(matrix,class_1_name_list)
+    inner_distance_2 = get_inner_class_distance(matrix,class_2_name_list)
+    inter_distance = get_inter_class_distance(matrix,class_1_name_list,class_2_name_list)
+    print(inner_distance_1)
+    print(inner_distance_2)
+    print(inter_distance)
+    #print(attention_net_trained.item_list)
+    #print(name_list)
 
         
