@@ -281,6 +281,8 @@ KEY_DIM = 10
 FEATURE_DIM = 8
 
 model_path = "/home/li/torch/model/attention_net_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + ".model"
+test_csv_file = "/home/li/torch/csv/test_csv.csv"
+
 
 if __name__ == '__main__':
 
@@ -357,7 +359,7 @@ if __name__ == '__main__':
                 l1_regularization += WEIGHT_DECAY * torch.norm(param,1)
                 l2_regularization += WEIGHT_DECAY * torch.norm(param,2)
 
-            loss = mse_loss + l1_regularization
+            loss = mse_loss + l0_regularization
             train_loss_each += loss.item()/train_data_num
             
             optimizer.zero_grad()
@@ -381,7 +383,7 @@ if __name__ == '__main__':
                 l2_regularization += WEIGHT_DECAY * torch.norm(param,2)
 
 
-            loss = mse_loss + l1_regularization
+            loss = mse_loss + l0_regularization
             test_loss_each += loss.item()/test_data_num
 
         print("Epoach: " + str(epoach) + " , Test Loss: " + str(test_loss_each))
@@ -398,9 +400,11 @@ if __name__ == '__main__':
     #csv_output_file = "/home/li/torch/result/test_result_" + str(user) + ".csv"
     #final_matrix.to_csv(csv_output_file)
     #print(loss_list)
-
-    plt.plot(range(len(train_loss_list)), train_loss_list)
-    plt.plot(range(len(test_loss_list)), test_loss_list)
+    plt_file = "/home/li/torch/figure/training_curve.png"
+    plt.plot(range(len(train_loss_list)), train_loss_list ,label = "train loss")
+    plt.plot(range(len(test_loss_list)), test_loss_list ,label = "test loss")
+    plt.legend(loc = 'upper right')
+    plt.savefig(plt_file)
     plt.show()
 
     

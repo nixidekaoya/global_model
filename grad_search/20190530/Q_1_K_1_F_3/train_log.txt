@@ -1,0 +1,17 @@
+Optimizer: Adam
+Learning Rate: 0.5
+Betas: (0.9, 0.999)
+Regularization: L1
+Loss: MSE
+Parameters: 
+key_matrix
+value_matrix
+linear_layer1.weight
+linear_layer1.bias
+linear_layer2.weight
+linear_layer2.bias
+Epoch: 0 , Train Loss: 0.05509821965446462
+Epoch: 0 , Test Loss: 0.05329118761233985
+Epoch: 0 , D11: 559.8117241132834 , D22: 182.6528499470003
+Epoch: 0 , D11*: 609.6883633588214, D22*: 63.01367268763285, D12*: 8807.138860156314
+Epoch: 0 , Coefficient 1: 1.0890953817098783 , Coefficient 2: 0.34499145622922 , Coefficient 3: 0.03819072497481406

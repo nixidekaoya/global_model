@@ -256,17 +256,22 @@ def l1_penalty(var):
 def l2_penalty(var):
     return torch.sqrt(torch.pow(var,2).sum())
 
-def get_inner_class_distance(df,sample_list):
+def get_inner_class_distance(df, sample_list, order = 2):
     distance = 0
     list_num = len(sample_list)
-    com = itertools.combinations(sample_list,2)
-    for c in com:
-        d = df.loc[c[0],c[1]]
-        distance += float(d) ** 2
-    distance = distance/(list_num ** 2)
+    combines = itertools.combinations(sample_list,2)
+    com_number = 0
+    for combine in combines:
+        #print("haha")
+        d = df.loc[combine[0],combine[1]]
+        com_number += 1
+        #print(combine)
+        distance += pow(float(d), order)
+    #print(com_number)
+    distance = distance/float(com_number)
     return distance
 
-def get_inter_class_distance(df, class_1_list, class_2_list):
+def get_inter_class_distance(df, class_1_list, class_2_list, order = 2):
     distance = 0
     class_1_num = len(class_1_list)
     class_2_num = len(class_2_list)
@@ -274,50 +279,124 @@ def get_inter_class_distance(df, class_1_list, class_2_list):
         inter_d = 0
         for name_j in class_2_list:
             d = df.loc[str(name_i),str(name_j)]
-            inter_d += float(d) ** 2
+            inter_d += pow(float(d), order)
         inter_d = inter_d/class_2_num
         distance += inter_d
     distance = distance/class_1_num
     return distance
 
-def evaluate_model_inner_inter_distance(model, sample_number, combines = (4,4)):
+def evaluate_model_inner_inter_distance(model, sample_number = 10, combines = (4,4), order = 2):
     class_1_inner_distance_list = []
     class_2_inner_distance_list = []
+    class_1_star_inner_distance_list = []
+    class_2_star_inner_distance_list = []
     inter_distance_list = []
-    class_1_num = combines[0]
-    class_2_num = combines[1]
+    class_1_num = 8
+    class_2_num = 8
+    class_1_star_num = combines[0]
+    class_2_star_num = combines[1]
     name_list = model.item_list
     
     for i in range(sample_number):
         class_1_sample = random.sample(range(32),class_1_num)
         class_2_sample = random.sample(range(32,64),class_2_num)
-        samples = class_1_sample + class_2_sample
-        sample_name_list = []
-        for i in samples:
-            sample_name_list.append(name_list[i])
-        class_1_name_list = sample_name_list[:class_1_num]
-        class_2_name_list = sample_name_list[class_1_num:]
-        test_input = []
+        class_1_star_sample = random.sample(class_1_sample, class_1_star_num)
+        class_2_star_sample = random.sample(class_2_sample, class_2_star_num)
+        star_sample = class_1_star_sample + class_2_star_sample
+
+        cross_sample_name_list = []
+        class_1_sample_name_list = []
+        class_2_sample_name_list = []
+        class_1_star_sample_name_list = []
+        class_2_star_sample_name_list = []
+
+        for i in class_1_star_sample:
+            class_1_star_sample_name_list.append(name_list[i])
+        for i in class_2_star_sample:
+            class_2_star_sample_name_list.append(name_list[i])
+        for i in star_sample:
+            cross_sample_name_list.append(name_list[i])
+        for i in class_1_sample:
+            class_1_sample_name_list.append(name_list[i])
+        for i in class_2_sample:
+            class_2_sample_name_list.append(name_list[i])
+
+
+        ## Test for debug
+        #print(class_1_star_sample_name_list)
+        #print(class_2_star_sample_name_list)
+        #print(cross_sample_name_list)
+        #print(class_1_sample_name_list)
+        #print(class_2_sample_name_list)
+
+
+        
+        cross_test_input = []
         for name in name_list:
-            if name in sample_name_list:
-                test_input.append(1)
+            if name in cross_sample_name_list:
+                cross_test_input.append(1)
             else:
-                test_input.append(0)
-        test_input = torch.from_numpy(np.array(test_input))
-        test_input = test_input.unsqueeze(0).float()
-        test_output = model.forward(test_input)
-        matrix = model.get_output_matrix(test_input, test_output, pandas = True)
-        class_1_inner_distance = get_inner_class_distance(matrix, class_1_name_list)
-        class_2_inner_distance = get_inner_class_distance(matrix, class_2_name_list)
-        inter_distance = get_inter_class_distance(matrix, class_1_name_list, class_2_name_list)
+                cross_test_input.append(0)
+
+
+        class_1_test_input = []
+        for name in name_list:
+            if name in class_1_sample_name_list:
+                class_1_test_input.append(1)
+            else:
+                class_1_test_input.append(0)
+
+        class_2_test_input = []
+        for name in name_list:
+            if name in class_2_sample_name_list:
+                class_2_test_input.append(1)
+            else:
+                class_2_test_input.append(0)
+
+        ### Debug
+        #print(len(cross_test_input))
+        #print(sum(cross_test_input))
+        #print(len(class_1_test_input))
+        #print(sum(class_1_test_input))
+        #print(len(class_2_test_input))
+        #print(sum(class_2_test_input))
+
+        ##### Create Input
+        cross_test_input = torch.from_numpy(np.array(cross_test_input)).unsqueeze(0).float()
+        class_1_test_input = torch.from_numpy(np.array(class_1_test_input)).unsqueeze(0).float()
+        class_2_test_input = torch.from_numpy(np.array(class_2_test_input)).unsqueeze(0).float()
+
+        #### Get Output
+        cross_test_output = model.forward(cross_test_input)
+        class_1_test_output = model.forward(class_1_test_input)
+        class_2_test_output = model.forward(class_2_test_input)
+
+        #### Get Output Matrix
+        cross_matrix = model.get_output_matrix(cross_test_input, cross_test_output, pandas = True)
+        class_1_matrix = model.get_output_matrix(class_1_test_input, class_1_test_output, pandas = True)
+        class_2_matrix = model.get_output_matrix(class_2_test_input, class_2_test_output, pandas = True)
+
+
+        #### Get D11, D22, D11*, D22*, D12*
+        class_1_inner_distance = get_inner_class_distance(class_1_matrix, class_1_sample_name_list, order = order)
+        class_2_inner_distance = get_inner_class_distance(class_2_matrix, class_2_sample_name_list, order = order)
+        cross_class_1_inner_distance = get_inner_class_distance(cross_matrix, class_1_star_sample_name_list, order = order)
+        cross_class_2_inner_distance = get_inner_class_distance(cross_matrix, class_2_star_sample_name_list, order = order)
+        cross_inter_distance = get_inter_class_distance(cross_matrix, class_1_star_sample_name_list, class_2_star_sample_name_list, order = order)
+
         class_1_inner_distance_list.append(class_1_inner_distance)
         class_2_inner_distance_list.append(class_2_inner_distance)
-        inter_distance_list.append(inter_distance)
+        class_1_star_inner_distance_list.append(cross_class_1_inner_distance)
+        class_2_star_inner_distance_list.append(cross_class_2_inner_distance)
+        inter_distance_list.append(cross_inter_distance)
 
+    #### Get Average Distance
     class_1_inner_distance = np.mean(class_1_inner_distance_list)
     class_2_inner_distance = np.mean(class_2_inner_distance_list)
+    class_1_star_inner_distance = np.mean(class_1_star_inner_distance_list)
+    class_2_star_inner_distance = np.mean(class_2_star_inner_distance_list)
     inter_distance = np.mean(inter_distance_list)
-    return class_1_inner_distance, class_2_inner_distance, inter_distance
+    return class_1_inner_distance, class_2_inner_distance, class_1_star_inner_distance, class_2_star_inner_distance, inter_distance
     
 
 ##########################################################################
@@ -341,14 +420,20 @@ with open(group_path,"r") as g_f:
 
 ################## PARAMS
 
+
+## Train Params
 BATCH_SIZE = 1
-LEARNING_RATE = 0.02
-WEIGHT_DECAY = torch.tensor(0.0001).float()
+LEARNING_RATE = 0.5
+WEIGHT_DECAY = torch.tensor(0.00001).float()
 QUERY_DIM = 5
 KEY_DIM = 10
 FEATURE_DIM = 8
+EPOCH = 50
 
+## Evaluation Params
 CV_NUM = 5
+EVA_SAMPLE_NUMBER = 30
+ORDER = 2
 
 model_path = "/home/li/torch/model/attention_net_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_CV.model"
 
@@ -356,138 +441,7 @@ if __name__ == '__main__':
 
     ############## Data Preparation ###################
 
-    data_file_path = "/home/li/datasets/lifelog/data/Group1_li_mofei_no_20_20190520.csv"
-    user = "li_mofei"
     
-    name_list = group_item_name_list
-    
-    input_dim = len(name_list)
 
-    dataset = GlobalModelDataset(input_csv, output_csv)
-
-    data_num = dataset.data_num
-
-    sample_data_num = int(data_num/CV_NUM)
-
-    train_data_num = data_num - sample_data_num
-    test_data_num = sample_data_num
-
-    splits_list = []
-    for i in range(CV_NUM):
-        splits_list.append(sample_data_num)
-    splits_list = tuple(splits_list)
-
-    datasets = torch.utils.data.random_split(dataset, splits_list)
-
-    dataloader_list = []
-    for ds in datasets:
-        dataloader = DataLoader(dataset = ds,
-                                batch_size = BATCH_SIZE,
-                                shuffle = True,
-                                num_workers = 0)
-        dataloader_list.append(dataloader)
-
-    params = (QUERY_DIM, KEY_DIM, FEATURE_DIM)
-    attention_net = Attention_Net(dataset,params)
-    
-    
-    optimizer = torch.optim.Adam(attention_net.parameters(), lr = LEARNING_RATE)
-    loss_function = torch.nn.MSELoss()
-
-    for name,param in attention_net.named_parameters():
-        if param.requires_grad:
-            print(name)
-            #print(param)
-
-
-    ###################### Training ############### Cross Validation
-    attention_net.train()
 
     
-    print(dataloader)
-    train_loss_list = []
-    test_loss_list = []
-    for epoach in range(20):
-        train_loss_each_epoach_list = []
-        test_loss_each_epoach_list = []
-
-        for i in range(CV_NUM):
-            test_dataloader = dataloader_list[i]
-            train_dataloader_list = dataloader_list[:i] + dataloader_list[i+1:]            
-
-            #print(len(train_dataloader_list))
-            ###### Train
-            train_loss_each_sample_list = []
-            for dataloader in train_dataloader_list:
-                
-                train_loss_each = 0
-                for im,label in dataloader:
-                    l0_regularization = torch.tensor(0).float()
-                    l1_regularization = torch.tensor(0).float()
-                    l2_regularization = torch.tensor(0).float()
-
-                    out = attention_net.forward(im)
-                    mse_loss = loss_function(out,label)
-                    for param in attention_net.parameters():
-                        l1_regularization += WEIGHT_DECAY * torch.norm(param,1)
-                        l2_regularization += WEIGHT_DECAY * torch.norm(param,2)
-
-                    loss = mse_loss + l0_regularization
-                    
-                    train_loss_each += loss.item()/sample_data_num
-            
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
-
-                
-                train_loss_each_sample_list.append(train_loss_each)
-                #print(len(train_loss_each_sample_list))
-            #print(len(train_loss_each_sample_list))
-            train_loss_each_epoach_list.append(np.mean(train_loss_each_sample_list))
-
-            ############ Test
-            test_loss_each = 0
-            for im,label in test_dataloader:
-
-                l0_regularization = torch.tensor(0).float()
-                l1_regularization = torch.tensor(0).float()
-                l2_regularization = torch.tensor(0).float()
-            
-                out = attention_net.forward(im)
-                mse_loss = loss_function(out,label)
-            
-                for param in attention_net.parameters():
-                    l1_regularization += WEIGHT_DECAY * torch.norm(param,1)
-                    l2_regularization += WEIGHT_DECAY * torch.norm(param,2)
-
-
-                loss = mse_loss + l0_regularization
-                test_loss_each += loss.item()/sample_data_num
-
-            test_loss_each_epoach_list.append(test_loss_each)
-        print("Epoach: " + str(epoach) + " , Train Loss: " + str(np.mean(train_loss_each_epoach_list)))
-        print("Epoach: " + str(epoach) + " , Test Loss: " + str(np.mean(test_loss_each_epoach_list)))
-                
-        train_loss_list.append(np.mean(train_loss_each_epoach_list))
-        test_loss_list.append(np.mean(test_loss_each_epoach_list))
-        
-
-    torch.save(attention_net, model_path)
-    
-    #attention_net.eval()
-    #final_input = torch.from_numpy(np.ones(input_dim)).float().unsqueeze(0)
-    #final_output = attention_net.forward(final_input)
-    #final_matrix = attention_net.get_output_matrix(final_input, final_output,pandas = True)
-    #csv_output_file = "/home/li/torch/result/test_result_" + str(user) + ".csv"
-    #final_matrix.to_csv(csv_output_file)
-    #print(loss_list)
-
-    plt_file = "/home/li/torch/figure/training_curve_cv.png"
-    plt.plot(range(len(train_loss_list)), train_loss_list ,label = "train loss")
-    plt.plot(range(len(test_loss_list)), test_loss_list ,label = "test loss")
-    plt.legend(loc = 'upper right')
-    plt.savefig(plt_file)
-    plt.show()
-
-        

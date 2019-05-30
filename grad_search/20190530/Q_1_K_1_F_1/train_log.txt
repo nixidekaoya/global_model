@@ -1,0 +1,12 @@
+Optimizer: Adam
+Learning Rate: 0.5
+Betas: (0.9, 0.999)
+Regularization: L1
+Loss: MSE
+Parameters: 
+key_matrix
+value_matrix
+linear_layer1.weight
+linear_layer1.bias
+linear_layer2.weight
+linear_layer2.bias
