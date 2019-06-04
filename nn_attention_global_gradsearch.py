@@ -7,6 +7,7 @@ import numpy as np
 import random
 import itertools
 import math
+import time
 import os
 
 import matplotlib
@@ -257,29 +258,29 @@ MSE = "MSE"
         
 
 ## Train Params
-OPT = ADAM
+OPT = SGD
 WD = 0.00001
 BATCH_SIZE = 1
-LEARNING_RATE = 0.5
+LEARNING_RATE = 0.05
 MOMENTUM = 0.9
 WEIGHT_DECAY = torch.tensor(WD).float()
-QUERY_DIM = 5
-KEY_DIM = 10
-FEATURE_DIM = 8
-EPOCH = 50
+#QUERY_DIM = 5
+#KEY_DIM = 10
+#FEATURE_DIM = 8
+EPOCH = 40
 BETAS = (0.9,0.999)
 REG = L1
 LOSS = MSE
 CV_NUM = 5
 
 ## Evaluation Params
-EVA_SAMPLE_NUMBER = 30
+EVA_SAMPLE_NUMBER = 20
 ORDER = 2
 
 ## Grad Search Params
-Q_RANGE = (1,10)
-K_RANGE = (1,10)
-F_RANGE = (1,10)
+Q_RANGE = (2,10)
+K_RANGE = (2,10)
+F_RANGE = (2,10)
 
 
 
@@ -436,14 +437,14 @@ def evaluate_model_inner_inter_distance(model, sample_number = 10, combines = (4
 
 def grad_search(dataset, data_loader_list, grad_search_path, params = (1,1,1)):
 
-    query_dim = params[0]
-    key_dim = params[1]
-    feature_dim = params[2]
+    QUERY_DIM = params[0]
+    KEY_DIM = params[1]
+    FEATURE_DIM = params[2]
     
     ############## Data Preparation ###################
     model_path = "/home/li/torch/model/attention_net_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_CV.model"
     
-    this_search_path = grad_search_path + "Q_" + str(query_dim) + "_K_" + str(key_dim) + "_F_" + str(feature_dim) + "/"
+    this_search_path = grad_search_path + "Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "/"
 
 
     if not os.path.exists(this_search_path):
@@ -620,13 +621,13 @@ def grad_search(dataset, data_loader_list, grad_search_path, params = (1,1,1)):
 
 
     ############################### Get Training Curve
-    extra = "_Optim_SGD_WD_L1_lr_5_epoach_50"
+    extra = "_Optim_SGD_WD_L1_lr_05_epoach_50_"
     figure = "train_curve"
     plt_file = this_search_path + "Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + str(extra) + str(figure) + ".png"
     plt.plot(range(len(train_loss_list)), train_loss_list ,label = "train loss")
     plt.plot(range(len(test_loss_list)), test_loss_list ,label = "test loss")
     plt.legend(loc = 'upper right')
-    plt.ylim(bottom = 0, top = 0.02)
+    #plt.ylim(bottom = 0, top = 0.02)
     plt.savefig(plt_file)
     #plt.show()
     plt.close('all')
@@ -694,7 +695,7 @@ with open(group_path,"r") as g_f:
 
 if __name__ == '__main__':
 
-    grad_search_path = "/home/li/torch/grad_search/20190530/"
+    grad_search_path = "/home/li/torch/grad_search/20190603/"
     grad_search_result_csv_path = grad_search_path + "result.csv"
     backup_path = grad_search_path + "backup.txt"
 
@@ -742,6 +743,8 @@ if __name__ == '__main__':
     coeff_2_list = []
     coeff_3_list = []
 
+    t1 = time.time()
+
     
     for q in range(Q_RANGE[0], Q_RANGE[1] + 1):
         for k in range(K_RANGE[0], K_RANGE[1] + 1):
@@ -785,7 +788,7 @@ if __name__ == '__main__':
     result["Test Loss"] = test_loss_list
     result["D11"] = class_1_distance_list
     result["D22"] = class_2_distance_list
-    dresult["D11*"] = class_1_star_distance_list
+    result["D11*"] = class_1_star_distance_list
     result["D22*"] = class_2_star_distance_list
     result["D12*"] = inter_class_distance_list
     result["C1"] = coeff_1_list
@@ -793,4 +796,7 @@ if __name__ == '__main__':
     result["C3"] = coeff_3_list
 
     result.to_csv(grad_search_result_csv_path)
+
+    t2 = time.time() - t1
+    print(t2)
                     

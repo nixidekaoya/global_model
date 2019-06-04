@@ -7,9 +7,17 @@ import random
 import itertools
 import math
 import os
+from sklearn.cluster import AgglomerativeClustering
+
+
+######### Const
+N_CLUSTERS = 2
+AFFINITY = "enclidean"
+LINKAGE = "average"
 
 
 
+############# FUNCTIONS
 def get_distance(c1,c2):
     return math.sqrt((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2)
 
@@ -37,6 +45,15 @@ def from_ij_get_index(i,j,item_number):
     else:
         return -1
     
+
+
+#################### Hierarchical Clustering
+def hierarchical_clustering(point_list):
+    clustering = AgglomerativeClustering(affinity = AFFINITY, linkage = LINKAGE, n_clusters = N_CLUSTER)
+    clustering.fit(point_list)
+    
+    return list(cluster.labels_)
+
     
 
 lifelog_itemlist = "/home/li/datasets/lifelog/itemlist.csv"
@@ -45,7 +62,7 @@ group_path = "/home/li/datasets/lifelog/Group1_64.txt"
 group_list = []
 group_item_name_list = []
 
-data_file_path = "/home/li/torch/data/Group1_nakamura_no_102_20190520.csv"
+data_file_path = "/home/li/torch/data/Group1_li_mofei_no_200_20190520.csv"
 
 train_data = pd.read_csv(data_file_path)
 
@@ -68,7 +85,7 @@ output_dim = int((item_number * (item_number -1))/2)
 
 input_matrix = []
 output_matrix = []
-item_index_dic = {}
+item_index_dic = {}n
 
 com = itertools.combinations(range(item_number),2)
 com_list = []
@@ -85,11 +102,17 @@ for i in range(1, data_number + 1):
     item_name_list = []
     Xcoordinate_list = []
     Ycoordinate_list = []
+
+    point_list = []
+    
     for index,row in data.iterrows():
         item_name_list.append(str(row["ItemName"]))
         Xcoordinate_list.append(float(row["X-Coordinate"]))
         Ycoordinate_list.append(float(row["Y-Coordinate"]))
+        point_list.append([float(row["X-Coordinate"]), float(row["Y-Coordinate"])])
 
+    labels = hierarchical_clustering(point_list)
+    
     input_array = []
     for i in range(item_number):
         if group_item_name_list[i] in item_name_list:
@@ -119,13 +142,15 @@ for i in range(1, data_number + 1):
 print(np.array(input_matrix).shape)
 print(np.array(output_matrix).shape)
 
-data_f_input = pd.DataFrame(input_matrix, columns = group_item_name_list, index = range(data_number))
-data_f_input.to_csv("/home/li/torch/data/Data_Input_102_nakamura_20190520.csv")
-data_f_output = pd.DataFrame(output_matrix, columns = com_list, index = range(data_number))
-data_f_output.to_csv("/home/li/torch/data/Data_Output_102_nakamura_20190520.csv")
+input_csv = "/home/li/torch/data/Data_Input_200_li_mofei_20190531.csv"
+output_csv = "/home/li/torch/data/Data_Output_200_li_mofei_20190531.csv"
 
-input_csv = "/home/li/torch/data/Data_Input_102_nakamura_20190520.csv"
-output_csv = "/home/li/torch/data/Data_Output_102_nakamura_20190520.csv"
+
+data_f_input = pd.DataFrame(input_matrix, columns = group_item_name_list, index = range(data_number))
+data_f_input.to_csv("/home/li/torch/data/Data_Input_200_li_mofei_20190531.csv")
+data_f_output = pd.DataFrame(output_matrix, columns = com_list, index = range(data_number))
+data_f_output.to_csv("/home/li/torch/data/Data_Output_200_li_mofei_20190531.csv")
+
 
 in_df = pd.read_csv(input_csv)
 ou_df = pd.read_csv(output_csv)
