@@ -1,0 +1,8 @@
+LED
+Bottle
+Rubber
+Umbrella
+Smartphone
+Tissue
+Laptop
+Adapter

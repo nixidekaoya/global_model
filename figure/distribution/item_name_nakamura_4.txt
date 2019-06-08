@@ -1,0 +1,8 @@
+Motor
+Microphone
+Marker Pen
+Scissors
+Chopsticks
+Cup
+Bag
+Teapot

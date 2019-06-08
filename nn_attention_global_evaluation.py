@@ -24,6 +24,8 @@ from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
+from sklearn.manifold import MDS
+
 
 ############### Dataset Class #####################
 class GlobalModelDataset(Dataset):
@@ -173,13 +175,14 @@ class Attention_Net(nn.Module):
         x = self.linear_layer1(x)
         x = x.mm(self.key_matrix)
         x = F.softmax(x,dim = 1)
+        self.distribute = x
         x = x.mm(self.value_matrix)
 
         #Decoder
         x = self.linear_layer2(x)
         x = x.mul(mask)
 
-        return x
+        return x,self.distribute
         
 
 
@@ -237,7 +240,7 @@ class Attention_Net(nn.Module):
         for com in self.dataset.com_list:
             i = com[0]
             j = com[1]
-            output_matrix[i,j] = math.exp(output[dataset.from_ij_get_index(i,j)])
+            output_matrix[i,j] = math.exp(output[self.dataset.from_ij_get_index(i,j)])
             output_matrix[j,i] = output_matrix[i,j]
 
         if pandas == False:
@@ -245,8 +248,42 @@ class Attention_Net(nn.Module):
         else:
             return pd.DataFrame(output_matrix, columns = self.item_list, index = self.item_list)
 
+    def get_output_small_matrix(self, inp, output, pandas = False):
 
+        output_mask = self.get_output_mask(inp)
+        output = output.mul(output_mask)
+        output = list(output[0].detach().numpy())
+        input_list = list(inp.squeeze())
+        input_item_list = []
+        index_list = []
 
+        for i in range(self.item_number):
+            if float(input_list[i]) == float(1):
+                input_item_list.append(self.item_list[i])
+                index_list.append(i)
+                
+        item_num = len(input_item_list)
+        com = itertools.combinations(range(item_num),2)
+        output_matrix = np.zeros([item_num, item_num], dtype = float)
+        #print(output.shape)
+        #print(output_matrix.shape)
+        
+        for c in com:
+            i = c[0]
+            j = c[1]
+            index_i = index_list[i]
+            index_j = index_list[j]
+            output_matrix[i,j] = math.exp(output[self.dataset.from_ij_get_index(index_i,index_j)])
+            output_matrix[j,i] = output_matrix[i,j]            
+
+        if pandas == False:
+            return output_matrix
+        else:
+            return pd.DataFrame(output_matrix, columns = input_item_list, index = input_item_list)
+        
+
+   
+        
 
 ########### FUNCTIONS
 
@@ -256,30 +293,6 @@ def l1_penalty(var):
 def l2_penalty(var):
     return torch.sqrt(torch.pow(var,2).sum())
 
-def get_inner_class_distance(df,sample_list):
-    distance = 0
-    list_num = len(sample_list)
-    com = itertools.combinations(sample_list,2)
-    for c in com:
-        d = df.loc[c[0],c[1]]
-        distance += float(d) ** 2
-    distance = distance/(list_num ** 2)
-    return distance
-
-def get_inter_class_distance(df, class_1_list, class_2_list):
-    distance = 0
-    class_1_num = len(class_1_list)
-    class_2_num = len(class_2_list)
-    for name_i in class_1_list:
-        inter_d = 0
-        for name_j in class_2_list:
-            d = df.loc[str(name_i),str(name_j)]
-            inter_d += float(d) ** 2
-        inter_d = inter_d/class_2_num
-        distance += inter_d
-    distance = distance/class_1_num
-    return distance
-    
 
 
 
@@ -313,7 +326,6 @@ FEATURE_DIM = 8
 
 CV_NUM = 5
 
-model_path = "/home/li/torch/model/attention_net_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_CV.model"
 test_csv_file = "/home/li/torch/csv/test_csv.csv"
 
 
@@ -321,59 +333,78 @@ if __name__ == '__main__':
 
     ############## Data Preparation ###################
 
+    model_path = "/home/li/torch/model/u_li_mofei_attention_net_Q_5_K_10_F_8_CV.model"
+
     data_file_path = "/home/li/datasets/lifelog/data/Group1_li_mofei_no_20_20190520.csv"
     user = "li_mofei"
-    
-    name_list = group_item_name_list
-    
-    input_dim = len(name_list)
 
+    plot_path = "/home/li/torch/figure/output/object_8_li_mofei_output_mds_figure.png"
+    csv_path = "/home/li/torch/figure/output/object_8_li_mofei_output_distance.csv"
+
+    bar_path = "/home/li/torch/figure/distribution/bar_graph_li_mofei.png"
+    item_name_path = "/home/li/torch/figure/distribution/item_name_li_mofei.txt"
+    
+    model = torch.load(model_path)
+    model.eval()
+
+    item_list = model.item_list
     dataset = GlobalModelDataset(input_csv, output_csv)
 
-    data_num = dataset.data_num
+    embedding = MDS(n_components = 2, dissimilarity = "precomputed")
 
+    input_sample = random.sample(range(64),8)
 
-    params = (QUERY_DIM, KEY_DIM, FEATURE_DIM)
-    attention_net = Attention_Net(dataset,params)
+    #input_sample = [4,14,45,62,35,22,54,23]
+        
+    input_name_list = []
+    for i in input_sample:
+        input_name_list.append(item_list[i])
 
-    for name,param in attention_net.named_parameters():
-        if param.requires_grad:
-            print(name)
-            #print(param)
+    with open(item_name_path, 'w') as item_f:
+        for item in input_name_list:
+            item_f.write(str(item) + "\r\n")
 
-    attention_net_trained = torch.load(model_path)
-    print(attention_net_trained.dataset)
-
-    class_1_sample = random.sample(range(32),4)
-    class_2_sample = random.sample(range(32,64),4)
-    samples = class_1_sample + class_2_sample
-    sample_name_list = []
-    for i in samples:
-        sample_name_list.append(name_list[i])
-    print(sample_name_list)
-    class_1_name_list = sample_name_list[:4]
-    class_2_name_list = sample_name_list[4:]
-    test_input = []
-    for name in name_list:
-        if name in sample_name_list:
-            test_input.append(1)
+    input_test = []
+    for item in item_list:
+        if item in input_name_list:
+            input_test.append(1)
         else:
-            test_input.append(0)
-    test_input = torch.from_numpy(np.array(test_input))
-    test_input = test_input.unsqueeze(0).float()
-    print(test_input.shape)
-    test_output = attention_net_trained.forward(test_input)
-    matrix = attention_net_trained.get_output_matrix(test_input,test_output, pandas = True)
-    matrix.to_csv(test_csv_file)
-    #print(matrix.loc[class_1_name_list[1]])
-    #print(itertools.combinations(class_1_name_list,2))
-    inner_distance_1 = get_inner_class_distance(matrix,class_1_name_list)
-    inner_distance_2 = get_inner_class_distance(matrix,class_2_name_list)
-    inter_distance = get_inter_class_distance(matrix,class_1_name_list,class_2_name_list)
-    print(inner_distance_1)
-    print(inner_distance_2)
-    print(inter_distance)
-    #print(attention_net_trained.item_list)
-    #print(name_list)
+            input_test.append(0)
+    input_test = torch.from_numpy(np.array(input_test)).unsqueeze(0).float()
+    output,dist = model.forward(input_test)
+    output_matrix = model.get_output_small_matrix(input_test, output, pandas = False)
+    output_df = model.get_output_small_matrix(input_test, output, pandas = True)
+    pos = embedding.fit_transform(output_matrix)
+
+    dist = list(dist[0].detach().numpy())
+
+    print(dist)
+
+    x_list = []
+    y_list = []
+    for p in pos:
+        x_list.append(p[0])
+        y_list.append(p[1])
+
+    plt.scatter(x_list, y_list, c = "red", marker = "o")
+    for i in range(len(input_name_list)):
+        plt.annotate(input_name_list[i], tuple(pos[i]))
+
+    plt.xlim((-1,1))
+    plt.ylim((-1,1))
+    plt.savefig(plot_path)
+    output_df.to_csv(csv_path)
+
+    plt.close('all')
+
+    plt.bar(range(len(dist)), dist, color = 'b')
+    plt.savefig(bar_path)
+    plt.close('all')
+
+    
+    
+    
+
+    
 
         

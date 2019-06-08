@@ -62,7 +62,7 @@ group_path = "/home/li/datasets/lifelog/Group1_64.txt"
 group_list = []
 group_item_name_list = []
 
-data_file_path = "/home/li/torch/data/Group1_li_mofei_no_200_20190520.csv"
+data_file_path = "/home/li/torch/data/Group1_nakamura_no_164_20190605.csv"
 
 train_data = pd.read_csv(data_file_path)
 
@@ -85,7 +85,7 @@ output_dim = int((item_number * (item_number -1))/2)
 
 input_matrix = []
 output_matrix = []
-item_index_dic = {}n
+item_index_dic = {}
 
 com = itertools.combinations(range(item_number),2)
 com_list = []
@@ -111,7 +111,7 @@ for i in range(1, data_number + 1):
         Ycoordinate_list.append(float(row["Y-Coordinate"]))
         point_list.append([float(row["X-Coordinate"]), float(row["Y-Coordinate"])])
 
-    labels = hierarchical_clustering(point_list)
+    #labels = hierarchical_clustering(point_list)
     
     input_array = []
     for i in range(item_number):
@@ -147,13 +147,13 @@ output_csv = "/home/li/torch/data/Data_Output_200_li_mofei_20190531.csv"
 
 
 data_f_input = pd.DataFrame(input_matrix, columns = group_item_name_list, index = range(data_number))
-data_f_input.to_csv("/home/li/torch/data/Data_Input_200_li_mofei_20190531.csv")
+data_f_input.to_csv("/home/li/torch/data/Data_Input_164_nakamura_20190605.csv")
 data_f_output = pd.DataFrame(output_matrix, columns = com_list, index = range(data_number))
-data_f_output.to_csv("/home/li/torch/data/Data_Output_200_li_mofei_20190531.csv")
+data_f_output.to_csv("/home/li/torch/data/Data_Output_164_nakamura_20190605.csv")
 
 
-in_df = pd.read_csv(input_csv)
-ou_df = pd.read_csv(output_csv)
+#in_df = pd.read_csv(input_csv)
+#ou_df = pd.read_csv(output_csv)
 
 
 

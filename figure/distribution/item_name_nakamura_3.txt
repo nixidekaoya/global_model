@@ -1,0 +1,8 @@
+FLASH Memory
+Microphone
+Spray
+Slipper
+Water Bottle
+Motor
+Toothbrush
+Vending Machine

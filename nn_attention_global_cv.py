@@ -140,6 +140,7 @@ class GlobalModelDataset(Dataset):
         
 
 ##################### Attention Net Class #######################
+        
 class Attention_Net(nn.Module):
     def __init__(self,dataset,params = (5,10,8)):
         super(Attention_Net,self).__init__()
@@ -173,13 +174,14 @@ class Attention_Net(nn.Module):
         x = self.linear_layer1(x)
         x = x.mm(self.key_matrix)
         x = F.softmax(x,dim = 1)
+        self.distribute = x
         x = x.mm(self.value_matrix)
 
         #Decoder
         x = self.linear_layer2(x)
         x = x.mul(mask)
 
-        return x
+        return x,self.distribute
         
 
 
@@ -237,7 +239,7 @@ class Attention_Net(nn.Module):
         for com in self.dataset.com_list:
             i = com[0]
             j = com[1]
-            output_matrix[i,j] = math.exp(output[dataset.from_ij_get_index(i,j)])
+            output_matrix[i,j] = math.exp(output[self.dataset.from_ij_get_index(i,j)])
             output_matrix[j,i] = output_matrix[i,j]
 
         if pandas == False:
@@ -245,6 +247,161 @@ class Attention_Net(nn.Module):
         else:
             return pd.DataFrame(output_matrix, columns = self.item_list, index = self.item_list)
 
+    def get_output_small_matrix(self, inp, output, pandas = False):
+
+        output_mask = self.get_output_mask(inp)
+        output = output.mul(output_mask)
+        input_list = list(inp)
+        input_item_list = []
+        index_list = []
+
+        for i in range(self.item_number):
+            if float(input_list[i]) == float(1):
+                input_item_list.append(self.item_list[i])
+                index_list.append(i)
+                
+        item_num = len(input_item_list)
+        com = itertools.combinations(range(item_num),2)
+        output_matrix = np.zeros([item_num, item_num], dtype = float)
+        
+        for c in com:
+            i = c[0]
+            j = c[1]
+            index_i = index_list[i]
+            index_j = index_list[j]
+            output_matrix[i,j] = math.exp(output[self.dataset.from_ij_get_index(index_i,index_j)])
+            output_matrix[j,i] = output_matrix[i,j]            
+
+        if pandas == False:
+            return torch.from_numpy(output_matrix)
+        else:
+            return pd.DataFrame(output_matrix, columns = input_item_list, index = input_item_list)
+        
+
+    
+######## Non Attention Net Class
+class Linear_Net(nn.Module):
+    def __init__(self,dataset,params = 8):
+        super(Attention_Net,self).__init__()
+        self.dataset = dataset
+        self.item_list = dataset.item_list
+        self.item_number = len(self.item_list)
+        self.output_dim = int((self.item_number * (self.item_number - 1))/2)
+
+        self.feature_dim = int(params)
+        self.linear_layer1 = nn.Linear(self.item_number,self.feature_dim)
+        self.linear_layer2 = nn.Linear(self.feature_dim, self.output_dim)
+
+        #Initialization
+        init.xavier_uniform(self.linear_layer1.weight)
+        init.xavier_uniform(self.linear_layer2.weight)
+        init.normal(self.linear_layer1.bias,mean = 0,std = 1)
+        init.normal(self.linear_layer2.bias,mean = 0,std = 1)
+        
+        
+        
+
+    def forward(self,x):
+        #Encoder
+        mask = self.get_mask(x)
+        #print(mask.shape)
+        
+        x = self.linear_layer1(x)
+        #Decoder
+        x = self.linear_layer2(x)
+        x = x.mul(mask)
+        
+        return x
+        
+
+
+    def get_mask(self,x):
+        #print(x.shape)
+        mask = []
+        x = x.data.numpy()
+        for batch in x:
+            sub_mask = []
+            for com in self.dataset.com_list:
+                i = com[0]
+                j = com[1]
+                if int(batch[i]) == 1 and int(batch[j]) == 1:
+                    sub_mask.append(1)
+                else:
+                    sub_mask.append(0)
+
+            mask.append(sub_mask)
+        mask = torch.from_numpy(np.array(mask)).float()
+        #print(mask.shape)
+        return mask
+
+    def get_output_mask(self,x):
+
+        mask = []
+        x = x.data.numpy()
+        for batch in x:
+            sub_mask = []
+            for com in self.dataset.com_list:
+                i = com[0]
+                j = com[1]
+                if int(batch[i]) == 1 and int(batch[j]) == 1:
+                    sub_mask.append(1)
+                else:
+                    sub_mask.append(np.nan)
+
+            mask.append(sub_mask)
+        mask = torch.from_numpy(np.array(mask)).float()
+        #print(mask.shape)
+        return mask
+
+    def get_output_matrix(self, inp, output, pandas = False):
+
+        output_mask = self.get_output_mask(inp)
+        output = output.mul(output_mask)
+        
+        output = list(output[0].detach().numpy())
+        #print(len(output))
+        output_matrix = np.zeros([self.item_number,self.item_number], dtype = float)
+        for com in self.dataset.com_list:
+            i = com[0]
+            j = com[1]
+            output_matrix[i,j] = math.exp(output[self.dataset.from_ij_get_index(i,j)])
+            output_matrix[j,i] = output_matrix[i,j]
+
+        if pandas == False:
+            return torch.from_numpy(output_matrix)
+        else:
+            return pd.DataFrame(output_matrix, columns = self.item_list, index = self.item_list)
+
+    def get_output_small_matrix(self, inp, output, pandas = False):
+
+        output_mask = self.get_output_mask(inp)
+        output = output.mul(output_mask)
+        input_list = list(inp)
+        input_item_list = []
+        index_list = []
+
+        for i in range(self.item_number):
+            if float(input_list[i]) == float(1):
+                input_item_list.append(self.item_list[i])
+                index_list.append(i)
+                
+        item_num = len(input_item_list)
+        com = itertools.combinations(range(item_num),2)
+        output_matrix = np.zeros([item_num, item_num], dtype = float)
+        
+        for c in com:
+            i = c[0]
+            j = c[1]
+            index_i = index_list[i]
+            index_j = index_list[j]
+            output_matrix[i,j] = math.exp(output[self.dataset.from_ij_get_index(index_i,index_j)])
+            output_matrix[j,i] = output_matrix[i,j]            
+
+        if pandas == False:
+            return torch.from_numpy(output_matrix)
+        else:
+            return pd.DataFrame(output_matrix, columns = input_item_list, index = input_item_list)
+    
 
 
 
@@ -419,9 +576,19 @@ with open(group_path,"r") as g_f:
         group_item_name_list.append(lifelog_data.loc[int(line.strip()) - 1,"Name"])
 
 ################## PARAMS
+## Constant
+ADAM = "Adam"
+SGD = "SGD"
+L0 = "L0"
+L1 = "L1"
+L2 = "L2"
+MSE = "MSE"
+ATTENTION = "attention_net"
+LINEAR = "linear_net"
 
 
 ## Train Params
+NET = ATTENTION
 BATCH_SIZE = 1
 LEARNING_RATE = 0.5
 WEIGHT_DECAY = torch.tensor(0.00001).float()
@@ -429,17 +596,172 @@ QUERY_DIM = 5
 KEY_DIM = 10
 FEATURE_DIM = 8
 EPOCH = 50
+MOMENTUM = 0.9
+REG = L0
 
 ## Evaluation Params
 CV_NUM = 5
 EVA_SAMPLE_NUMBER = 30
-ORDER = 2
+EPOCH = 50
+BETAS = (0.9,0.999)
+REG = L1
+LOSS = MSE
+CV_NUM = 4
+
+
 
 model_path = "/home/li/torch/model/attention_net_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_CV.model"
 
 if __name__ == '__main__':
 
+    
     ############## Data Preparation ###################
+    model_path = "/home/li/torch/model/linear_net_u_nakamura_attention_net_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_CV.model" 
+
+
+    input_csv = "/home/li/torch/data/Data_Input_164_nakamura_20190605.csv"
+    output_csv = "/home/li/torch/data/Data_Output_164_nakamura_20190605.csv"
+    dataset = GlobalModelDataset(input_csv, output_csv)
+
+    data_num = dataset.data_num
+
+    sample_data_num = int(data_num/CV_NUM)
+
+    train_data_num = data_num - sample_data_num
+    test_data_num = sample_data_num
+
+    splits_list = []
+    for i in range(CV_NUM):
+        splits_list.append(sample_data_num)
+    splits_list = tuple(splits_list)
+
+    datasets = torch.utils.data.random_split(dataset, splits_list)
+
+    dataloader_list = []
+    for ds in datasets:
+        dataloader = DataLoader(dataset = ds,
+                                batch_size = BATCH_SIZE,
+                                shuffle = True,
+                                num_workers = 0)
+        dataloader_list.append(dataloader)
+
+    data_num = dataset.data_num
+
+    sample_data_num = int(data_num/CV_NUM)
+
+    params = (QUERY_DIM,KEY_DIM,FEATURE_DIM)
+
+    ## Attention Net
+    if NET == ATTENTION:
+        net = Attention_Net(dataset, params)
+    ## Linear Net
+    elif NET == LINEAR:
+        net = Linear_Net(dataset, FEATURE_DIM)
+
+
+
+    ## Optimizer
+    optimizer = torch.optim.SGD(net.parameters(), lr = LEARNING_RATE, momentum = MOMENTUM)
+    #optimizer = torch.optim.Adam(net.parameters(), lr = LEARNING_RATE, betas = BETAS)
+
+    ## Loss
+    loss_function = torch.nn.MSELoss()
+
+    #### Print Parameters
+    #for name,param in net.named_parameters():
+    #    if param.requires_grad:
+    #        print(name)
+            #print(param)
+
+
+    ###################### Training ############### Cross Validation
+    #attention_net.train()
+
+    
+    #print(dataloader)
+    train_loss_list = []
+    test_loss_list = []
+    
+    for epoch in range(EPOCH):
+        train_loss_each_epoch_list = []
+        test_loss_each_epoch_list = []
+
+        for i in range(CV_NUM):
+            test_dataloader = dataloader_list[i]
+            train_dataloader_list = dataloader_list[:i] + dataloader_list[i+1:]            
+
+            net.train()
+            #print(len(train_dataloader_list))
+            ###### Train
+            train_loss_each_sample_list = []
+            for dataloader in train_dataloader_list:
+                
+                train_loss_each = 0
+                for im,label in dataloader:
+                    l0_regularization = torch.tensor(0).float()
+                    l1_regularization = torch.tensor(0).float()
+                    l2_regularization = torch.tensor(0).float()
+
+                    if NET == ATTENTION:
+                        out,dis = net.forward(im)
+                    elif NET == LINEAR:
+                        out = net.forward(im)
+                    mse_loss = loss_function(out,label)
+
+                    ## Regularization
+                    for param in net.parameters():
+                        l1_regularization += WEIGHT_DECAY * torch.norm(param,1)
+                        l2_regularization += WEIGHT_DECAY * torch.norm(param,2)
+
+                    if REG == L0:
+                        loss = mse_loss + l0_regularization
+                    elif REG == L1:
+                        loss = mse_loss + l1_regularization
+                    elif REG == L2:
+                        loss = mse_loss + l2_regularization
+                    
+                    train_loss_each += mse_loss.item()/sample_data_num
+            
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
+
+                train_loss_each_sample_list.append(train_loss_each)
+                #print(len(train_loss_each_sample_list))
+            #print(len(train_loss_each_sample_list))
+            train_loss_each_epoch_list.append(np.mean(train_loss_each_sample_list))
+
+
+            ############ Test
+            test_loss_each = 0
+            net.eval()
+            for im,label in test_dataloader:
+
+                if NET == ATTENTION:
+                    out,dis = net.forward(im)
+                elif NET == LINEAR:
+                    out = net.forward(im)
+                #out = linear_net.forward(im)
+                mse_loss = loss_function(out,label)
+                test_loss_each += mse_loss.item()/sample_data_num
+
+            test_loss_each_epoch_list.append(test_loss_each)
+
+
+        train_loss = np.mean(train_loss_each_epoch_list)
+        test_loss = np.mean(test_loss_each_epoch_list)
+        train_loss_list.append(train_loss)
+        test_loss_list.append(test_loss)
+
+        info1 = "Epoch: " + str(epoch) + " , Train Loss: " + str(train_loss)
+        info2 = "Epoch: " + str(epoch) + " , Test Loss: " + str(test_loss)
+        print(info1)
+        print(info2)
+
+
+    torch.save(net, model_path)
+
+
 
     
 
