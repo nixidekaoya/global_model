@@ -303,11 +303,6 @@ group_path = "/home/li/datasets/lifelog/Group1_64.txt"
 group_list = []
 group_item_name_list = []
 
-input_csv = "/home/li/torch/data/Data_Input_200_LI_Mofei_20190518.csv"
-output_csv = "/home/li/torch/data/Data_Output_200_LI_Mofei_20190518.csv"
-
-
-
 
 
 with open(group_path,"r") as g_f:
@@ -325,6 +320,7 @@ KEY_DIM = 10
 FEATURE_DIM = 8
 
 CV_NUM = 5
+OBJECT_NUM = 8
 
 test_csv_file = "/home/li/torch/csv/test_csv.csv"
 
@@ -333,16 +329,17 @@ if __name__ == '__main__':
 
     ############## Data Preparation ###################
 
-    model_path = "/home/li/torch/model/u_li_mofei_attention_net_Q_5_K_10_F_8_CV.model"
+    model_path = "/home/li/torch/model/attention_net_u_nakamura_Q_9_K_3_F_5_CV.model"
+    user = "nakamura"
 
-    data_file_path = "/home/li/datasets/lifelog/data/Group1_li_mofei_no_20_20190520.csv"
-    user = "li_mofei"
+    input_csv = "/home/li/torch/data/Data_Input_164_nakamura_20190605.csv"
+    output_csv = "/home/li/torch/data/Data_Output_164_nakamura_20190605.csv"
 
-    plot_path = "/home/li/torch/figure/output/object_8_li_mofei_output_mds_figure.png"
-    csv_path = "/home/li/torch/figure/output/object_8_li_mofei_output_distance.csv"
+    plot_path = "/home/li/torch/figure/output/object_8_nakamura_output_mds_figure.png"
+    csv_path = "/home/li/torch/figure/output/object_8_nakamura_output_distance.csv"
 
-    bar_path = "/home/li/torch/figure/distribution/bar_graph_li_mofei.png"
-    item_name_path = "/home/li/torch/figure/distribution/item_name_li_mofei.txt"
+    bar_path = "/home/li/torch/figure/distribution/bar_graph_nakamura.png"
+    item_name_path = "/home/li/torch/figure/distribution/item_name_nakamura.txt"
     
     model = torch.load(model_path)
     model.eval()
@@ -352,7 +349,7 @@ if __name__ == '__main__':
 
     embedding = MDS(n_components = 2, dissimilarity = "precomputed")
 
-    input_sample = random.sample(range(64),8)
+    input_sample = random.sample(range(64),OBJECT_NUM)
 
     #input_sample = [4,14,45,62,35,22,54,23]
         
@@ -393,6 +390,7 @@ if __name__ == '__main__':
     plt.xlim((-1,1))
     plt.ylim((-1,1))
     plt.savefig(plot_path)
+    
     output_df.to_csv(csv_path)
 
     plt.close('all')

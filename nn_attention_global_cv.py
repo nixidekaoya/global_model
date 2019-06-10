@@ -282,7 +282,7 @@ class Attention_Net(nn.Module):
 ######## Non Attention Net Class
 class Linear_Net(nn.Module):
     def __init__(self,dataset,params = 8):
-        super(Attention_Net,self).__init__()
+        super(Linear_Net,self).__init__()
         self.dataset = dataset
         self.item_list = dataset.item_list
         self.item_number = len(self.item_list)
@@ -563,10 +563,6 @@ group_path = "/home/li/datasets/lifelog/Group1_64.txt"
 group_list = []
 group_item_name_list = []
 
-input_csv = "/home/li/torch/data/Data_Input_200_LI_Mofei_20190518.csv"
-output_csv = "/home/li/torch/data/Data_Output_200_LI_Mofei_20190518.csv"
-
-
 
 
 
@@ -588,13 +584,13 @@ LINEAR = "linear_net"
 
 
 ## Train Params
-NET = ATTENTION
+NET = LINEAR
 BATCH_SIZE = 1
-LEARNING_RATE = 0.5
+LEARNING_RATE = 0.1
 WEIGHT_DECAY = torch.tensor(0.00001).float()
-QUERY_DIM = 5
-KEY_DIM = 10
-FEATURE_DIM = 8
+QUERY_DIM = 9
+KEY_DIM = 3
+FEATURE_DIM = 5
 EPOCH = 50
 MOMENTUM = 0.9
 REG = L0
@@ -609,15 +605,13 @@ LOSS = MSE
 CV_NUM = 4
 
 
-
-model_path = "/home/li/torch/model/attention_net_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_CV.model"
-
 if __name__ == '__main__':
 
     
     ############## Data Preparation ###################
-    model_path = "/home/li/torch/model/linear_net_u_nakamura_attention_net_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_CV.model" 
-
+    username = "nakamura"
+    
+    model_path = "/home/li/torch/model/" + str(NET) + "_u_" + str(username) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_CV.model" 
 
     input_csv = "/home/li/torch/data/Data_Input_164_nakamura_20190605.csv"
     output_csv = "/home/li/torch/data/Data_Output_164_nakamura_20190605.csv"

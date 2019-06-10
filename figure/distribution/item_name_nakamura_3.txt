@@ -1,8 +1,8 @@
-FLASH Memory
-Microphone
-Spray
-Slipper
-Water Bottle
-Motor
-Toothbrush
-Vending Machine
+Switch
+Teapot
+Hard Disk
+Rice Cooker
+Laptop
+Desktop
+Television
+Bed

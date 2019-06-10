@@ -1,8 +1,8 @@
-Trash Bin
-FLASH Memory
-Switch
-Smoke detector
-Adapter
+Battery
+Microwave
+Smartphone
+Briefcase
+Cable
+Shoes
+Toothbrush
 Glasses
-Calender
-Rice Cooker
