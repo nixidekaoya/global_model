@@ -409,7 +409,7 @@ ORDER = 1
 ## Grad Search Params
 Q_RANGE = (2,10)
 K_RANGE = (2,10)
-F_RANGE = (2,10)
+F_RANGE = (1,20)
 
 
 
@@ -532,9 +532,9 @@ def evaluate_model_inner_inter_distance(model, sample_number = 10, combines = (4
         class_2_test_input = torch.from_numpy(np.array(class_2_test_input)).unsqueeze(0).float()
 
         #### Get Output
-        cross_test_output,dis = model.forward(cross_test_input)
-        class_1_test_output,dis = model.forward(class_1_test_input)
-        class_2_test_output,dis = model.forward(class_2_test_input)
+        cross_test_output = model.forward(cross_test_input)
+        class_1_test_output = model.forward(class_1_test_input)
+        class_2_test_output = model.forward(class_2_test_input)
 
         #### Get Output Matrix
         cross_matrix = model.get_output_matrix(cross_test_input, cross_test_output, pandas = True)
@@ -564,16 +564,15 @@ def evaluate_model_inner_inter_distance(model, sample_number = 10, combines = (4
     return class_1_inner_distance, class_2_inner_distance, class_1_star_inner_distance, class_2_star_inner_distance, inter_distance
     
 
-def grad_search(dataset, data_loader_list, grad_search_path, params = (1,1,1)):
+def grad_search_normal(dataset, data_loader_list, grad_search_path, param = 1):
 
-    QUERY_DIM = params[0]
-    KEY_DIM = params[1]
-    FEATURE_DIM = params[2]
+
+    FEATURE_DIM = param
     
     ############## Data Preparation ###################
-    model_path = "/home/li/torch/model/attention_net_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_CV.model"
+    model_path = "/home/li/torch/model/normal_net_F_" + str(FEATURE_DIM) + "_CV.model"
     
-    this_search_path = grad_search_path + "Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "/"
+    this_search_path = grad_search_path + "F_" + str(FEATURE_DIM) + "/"
 
 
     if not os.path.exists(this_search_path):
@@ -591,15 +590,15 @@ def grad_search(dataset, data_loader_list, grad_search_path, params = (1,1,1)):
 
     sample_data_num = int(data_num/CV_NUM)
 
-    ## Attention Net
-    attention_net = Attention_Net(dataset, params)
+    ## Linear Net
+    net = Linear_Net(dataset, FEATURE_DIM)
 
 
     ## Optimizer
     if OPT == SGD:
-        optimizer = torch.optim.SGD(attention_net.parameters(), lr = LEARNING_RATE, momentum = MOMENTUM)
+        optimizer = torch.optim.SGD(net.parameters(), lr = LEARNING_RATE, momentum = MOMENTUM)
     elif OPT == ADAM:
-        optimizer = torch.optim.Adam(attention_net.parameters(), lr = LEARNING_RATE, betas = BETAS)
+        optimizer = torch.optim.Adam(net.parameters(), lr = LEARNING_RATE, betas = BETAS)
         
 
     ## Train Log
@@ -613,7 +612,7 @@ def grad_search(dataset, data_loader_list, grad_search_path, params = (1,1,1)):
         train_f.write("Regularization: " + str(REG) + "\r\n")
         train_f.write("Loss: " + str(LOSS) + "\r\n")
         train_f.write("Parameters: \r\n" )
-        for name,param in attention_net.named_parameters():
+        for name,param in net.named_parameters():
             if param.requires_grad:
                 train_f.write(str(name) + "\r\n")
 
@@ -654,7 +653,7 @@ def grad_search(dataset, data_loader_list, grad_search_path, params = (1,1,1)):
         for i in range(CV_NUM):
             test_dataloader = dataloader_list[i]
             train_dataloader_list = dataloader_list[:i] + dataloader_list[i+1:]            
-            attention_net.train()
+            net.train()
             #print(len(train_dataloader_list))
             ###### Train
             train_loss_each_sample_list = []
@@ -666,11 +665,11 @@ def grad_search(dataset, data_loader_list, grad_search_path, params = (1,1,1)):
                     l1_regularization = torch.tensor(0).float()
                     l2_regularization = torch.tensor(0).float()
 
-                    out,dis = attention_net.forward(im)
+                    out = net.forward(im)
                     mse_loss = loss_function(out,label)
 
                     ## Regularization
-                    for param in attention_net.parameters():
+                    for param in net.parameters():
                         l1_regularization += WEIGHT_DECAY * torch.norm(param,1)
                         l2_regularization += WEIGHT_DECAY * torch.norm(param,2)
 
@@ -695,9 +694,9 @@ def grad_search(dataset, data_loader_list, grad_search_path, params = (1,1,1)):
 
             ############ Test
             test_loss_each = 0
-            attention_net.eval()
+            net.eval()
             for im,label in test_dataloader:
-                out,dis = attention_net.forward(im)
+                out = net.forward(im)
                 mse_loss = loss_function(out,label)
                 test_loss_each += mse_loss.item()/sample_data_num
 
@@ -714,7 +713,7 @@ def grad_search(dataset, data_loader_list, grad_search_path, params = (1,1,1)):
         info1 = "Epoch: " + str(epoch) + " , Train Loss: " + str(train_loss)
         info2 = "Epoch: " + str(epoch) + " , Test Loss: " + str(test_loss)
 
-        class_1_distance, class_2_distance , class_1_star_distance, class_2_star_distance, inter_distance = evaluate_model_inner_inter_distance(attention_net, sample_number = EVA_SAMPLE_NUMBER, order = ORDER)
+        class_1_distance, class_2_distance , class_1_star_distance, class_2_star_distance, inter_distance = evaluate_model_inner_inter_distance(net, sample_number = EVA_SAMPLE_NUMBER, order = ORDER)
         class_1_distance_list.append(class_1_distance)
         class_2_distance_list.append(class_2_distance)
         class_1_star_distance_list.append(class_1_star_distance)
@@ -752,7 +751,7 @@ def grad_search(dataset, data_loader_list, grad_search_path, params = (1,1,1)):
     ############################### Get Training Curve
     extra = "_Optim_SGD_WD_L1_lr_05_epoach_50_"
     figure = "train_curve"
-    plt_file = this_search_path + "Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + str(extra) + str(figure) + ".png"
+    plt_file = this_search_path +  "F_" + str(FEATURE_DIM) + str(extra) + str(figure) + ".png"
     plt.plot(range(len(train_loss_list)), train_loss_list ,label = "train loss")
     plt.plot(range(len(test_loss_list)), test_loss_list ,label = "test loss")
     plt.legend(loc = 'upper right')
@@ -763,7 +762,7 @@ def grad_search(dataset, data_loader_list, grad_search_path, params = (1,1,1)):
 
     ############################ Get Distance Curve
     figure = "distance_curve"
-    plt_file = this_search_path + "Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + str(extra) + str(figure) + ".png"
+    plt_file = this_search_path +"F_" + str(FEATURE_DIM) + str(extra) + str(figure) + ".png"
     
     plt.plot(range(len(class_1_distance_list)), class_1_distance_list, label = "D11")
     plt.plot(range(len(class_2_distance_list)), class_2_distance_list, label = "D22")
@@ -777,7 +776,7 @@ def grad_search(dataset, data_loader_list, grad_search_path, params = (1,1,1)):
 
     ############################ Get Coeff Curve
     figure = "coefficient_curve"
-    plt_file = this_search_path + "Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + str(extra) + str(figure) + ".png"
+    plt_file = this_search_path + "F_" + str(FEATURE_DIM) + str(extra) + str(figure) + ".png"
     
     plt.plot(range(len(coeff_1_list)), coeff_1_list, label = "C1")
     plt.plot(range(len(coeff_2_list)), coeff_2_list, label = "C2")
@@ -789,7 +788,7 @@ def grad_search(dataset, data_loader_list, grad_search_path, params = (1,1,1)):
 
     ############################ Get Coeff Scatter Plot Versus Loss
     figure = "coefficient_scatter_plot"
-    plt_file = this_search_path + "Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + str(extra) + str(figure) + ".png"
+    plt_file = this_search_path +"F_" + str(FEATURE_DIM) + str(extra) + str(figure) + ".png"
     
     plt.scatter(train_loss_list, coeff_1_list, c = "blue", marker = "o", label = "C1")
     plt.scatter(train_loss_list, coeff_2_list, c = "green", marker = "X", label = "C2")
@@ -824,7 +823,7 @@ with open(group_path,"r") as g_f:
 
 if __name__ == '__main__':
 
-    grad_search_path = "/home/li/torch/grad_search/20190604/"
+    grad_search_path = "/home/li/torch/grad_search/201906010/"
     grad_search_result_csv_path = grad_search_path + "result.csv"
     backup_path = grad_search_path + "backup.txt"
     plot_path = grad_search_path + "parameters_plot.txt"
@@ -881,48 +880,46 @@ if __name__ == '__main__':
     t1 = time.time()
 
     
-    for q in range(Q_RANGE[0], Q_RANGE[1] + 1):
-        for k in range(K_RANGE[0], K_RANGE[1] + 1):
-            for f in range(F_RANGE[0], F_RANGE[1] + 1):
-                params = (q,k,f)
-                combine_list.append(params)
-                return_tuple = grad_search(dataset, dataloader_list, grad_search_path, params = params)
-                train_loss_list.append(float(return_tuple[0]))
-                test_loss_list.append(float(return_tuple[1]))
-                class_1_distance_list.append(float(return_tuple[2]))
-                class_2_distance_list.append(float(return_tuple[3]))
-                class_1_star_distance_list.append(float(return_tuple[4]))
-                class_2_star_distance_list.append(float(return_tuple[5]))
-                inter_class_distance_list.append(float(return_tuple[6]))
-                coeff_1_list.append(float(return_tuple[7]))
-                coeff_2_list.append(float(return_tuple[8]))
-                coeff_3_list.append(float(return_tuple[9]))
+    for f in range(F_RANGE[0], F_RANGE[1] + 1):
+        params = f
+        combine_list.append(params)
+        return_tuple = grad_search_normal(dataset, dataloader_list, grad_search_path, param = params)
+        train_loss_list.append(float(return_tuple[0]))
+        test_loss_list.append(float(return_tuple[1]))
+        class_1_distance_list.append(float(return_tuple[2]))
+        class_2_distance_list.append(float(return_tuple[3]))
+        class_1_star_distance_list.append(float(return_tuple[4]))
+        class_2_star_distance_list.append(float(return_tuple[5]))
+        inter_class_distance_list.append(float(return_tuple[6]))
+        coeff_1_list.append(float(return_tuple[7]))
+        coeff_2_list.append(float(return_tuple[8]))
+        coeff_3_list.append(float(return_tuple[9]))
 
-                print("Combines: (Q,K,F) = " + str(params))
-                print("Result: " + str(return_tuple))
-                ## For plotting
-                with open(plot_path,'a') as plot_log_file:
-                    plot_log_file.write(str(params) + "\t" + str(float(return_tuple[7])) + "\t" + str(float(return_tuple[8])) + "\t" + str(float(return_tuple[9])) + "\r\n")
-                ## BACK_UP
+        print("Combines: F = " + str(params))
+        print("Result: " + str(return_tuple))
+        ## For plotting
+        with open(plot_path,'a') as plot_log_file:
+            plot_log_file.write(str(params) + "\t" + str(float(return_tuple[7])) + "\t" + str(float(return_tuple[8])) + "\t" + str(float(return_tuple[9])) + "\r\n")
+        ## BACK_UP
 
-                backup_dic = {"Combination": str(combine_list),
-                              "TrainLoss": str(train_loss_list),
-                              "TestLoss": str(test_loss_list),
-                              "Class1Distance": str(class_1_distance_list),
-                              "Class2Distance": str(class_2_distance_list),
-                              "Class1StarDistance": str(class_1_star_distance_list),
-                              "Class2StarDistance": str(class_2_star_distance_list),
-                              "InterClassDistance": str(inter_class_distance_list),
-                              "Coeff1": str(coeff_1_list),
-                              "Coeff2": str(coeff_2_list),
-                              "Coeff3": str(coeff_3_list)}
+        backup_dic = {"Combination": str(combine_list),
+                      "TrainLoss": str(train_loss_list),
+                      "TestLoss": str(test_loss_list),
+                      "Class1Distance": str(class_1_distance_list),
+                      "Class2Distance": str(class_2_distance_list),
+                      "Class1StarDistance": str(class_1_star_distance_list),
+                      "Class2StarDistance": str(class_2_star_distance_list),
+                      "InterClassDistance": str(inter_class_distance_list),
+                      "Coeff1": str(coeff_1_list),
+                      "Coeff2": str(coeff_2_list),
+                      "Coeff3": str(coeff_3_list)}
                     
 
-                with open(backup_path, "w") as backup_f:
-                    backup_f.write(str(backup_dic))
+        with open(backup_path, "w") as backup_f:
+            backup_f.write(str(backup_dic))
 
     
-    result["(Q,K,V)"] = combine_list
+    result["F"] = combine_list
     result["Train Loss"] = train_loss_list
     result["Test Loss"] = test_loss_list
     result["D11"] = class_1_distance_list
