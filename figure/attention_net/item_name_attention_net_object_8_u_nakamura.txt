@@ -1,8 +1,8 @@
-Briefcase
-Motor
-Calculator
-Plate
-Bed
-Brush
-Printer
-Wallet
+Scissors
+Projector
+Chopsticks
+Toothbrush
+Hard Disk
+FLASH Memory
+Microphone
+Bag

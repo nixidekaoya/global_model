@@ -577,7 +577,7 @@ if __name__ == '__main__':
     plt.ylim((-1,1))
     plt.savefig(normal_plot_path)
     
-    attention_output_df.to_csv(normal_csv_path)
+    normal_output_df.to_csv(normal_csv_path)
 
     plt.close('all')
 
