@@ -1,0 +1,8 @@
+Briefcase
+Motor
+Calculator
+Plate
+Bed
+Brush
+Printer
+Wallet

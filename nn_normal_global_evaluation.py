@@ -142,6 +142,7 @@ class GlobalModelDataset(Dataset):
         
 
 ##################### Attention Net Class #######################
+        
 class Attention_Net(nn.Module):
     def __init__(self,dataset,params = (5,10,8)):
         super(Attention_Net,self).__init__()
@@ -252,8 +253,7 @@ class Attention_Net(nn.Module):
 
         output_mask = self.get_output_mask(inp)
         output = output.mul(output_mask)
-        output = list(output[0].detach().numpy())
-        input_list = list(inp.squeeze())
+        input_list = list(inp)
         input_item_list = []
         index_list = []
 
@@ -265,8 +265,6 @@ class Attention_Net(nn.Module):
         item_num = len(input_item_list)
         com = itertools.combinations(range(item_num),2)
         output_matrix = np.zeros([item_num, item_num], dtype = float)
-        #print(output.shape)
-        #print(output_matrix.shape)
         
         for c in com:
             i = c[0]
@@ -277,10 +275,135 @@ class Attention_Net(nn.Module):
             output_matrix[j,i] = output_matrix[i,j]            
 
         if pandas == False:
-            return output_matrix
+            return torch.from_numpy(output_matrix)
         else:
             return pd.DataFrame(output_matrix, columns = input_item_list, index = input_item_list)
         
+
+    
+######## Non Attention Net Class
+class Linear_Net(nn.Module):
+    def __init__(self,dataset,params = 8):
+        super(Linear_Net,self).__init__()
+        self.dataset = dataset
+        self.item_list = dataset.item_list
+        self.item_number = len(self.item_list)
+        self.output_dim = int((self.item_number * (self.item_number - 1))/2)
+
+        self.feature_dim = int(params)
+        self.linear_layer1 = nn.Linear(self.item_number,self.feature_dim)
+        self.linear_layer2 = nn.Linear(self.feature_dim, self.output_dim)
+
+        #Initialization
+        init.xavier_uniform(self.linear_layer1.weight)
+        init.xavier_uniform(self.linear_layer2.weight)
+        init.normal(self.linear_layer1.bias,mean = 0,std = 1)
+        init.normal(self.linear_layer2.bias,mean = 0,std = 1)
+        
+        
+        
+
+    def forward(self,x):
+        #Encoder
+        mask = self.get_mask(x)
+        #print(mask.shape)
+        
+        x = self.linear_layer1(x)
+        #Decoder
+        x = self.linear_layer2(x)
+        x = x.mul(mask)
+        
+        return x
+        
+
+
+    def get_mask(self,x):
+        #print(x.shape)
+        mask = []
+        x = x.data.numpy()
+        for batch in x:
+            sub_mask = []
+            for com in self.dataset.com_list:
+                i = com[0]
+                j = com[1]
+                if int(batch[i]) == 1 and int(batch[j]) == 1:
+                    sub_mask.append(1)
+                else:
+                    sub_mask.append(0)
+
+            mask.append(sub_mask)
+        mask = torch.from_numpy(np.array(mask)).float()
+        #print(mask.shape)
+        return mask
+
+    def get_output_mask(self,x):
+
+        mask = []
+        x = x.data.numpy()
+        for batch in x:
+            sub_mask = []
+            for com in self.dataset.com_list:
+                i = com[0]
+                j = com[1]
+                if int(batch[i]) == 1 and int(batch[j]) == 1:
+                    sub_mask.append(1)
+                else:
+                    sub_mask.append(np.nan)
+
+            mask.append(sub_mask)
+        mask = torch.from_numpy(np.array(mask)).float()
+        #print(mask.shape)
+        return mask
+
+    def get_output_matrix(self, inp, output, pandas = False):
+
+        output_mask = self.get_output_mask(inp)
+        output = output.mul(output_mask)
+        
+        output = list(output[0].detach().numpy())
+        #print(len(output))
+        output_matrix = np.zeros([self.item_number,self.item_number], dtype = float)
+        for com in self.dataset.com_list:
+            i = com[0]
+            j = com[1]
+            output_matrix[i,j] = math.exp(output[self.dataset.from_ij_get_index(i,j)])
+            output_matrix[j,i] = output_matrix[i,j]
+
+        if pandas == False:
+            return torch.from_numpy(output_matrix)
+        else:
+            return pd.DataFrame(output_matrix, columns = self.item_list, index = self.item_list)
+
+    def get_output_small_matrix(self, inp, output, pandas = False):
+
+        output_mask = self.get_output_mask(inp)
+        output = output.mul(output_mask)
+        input_list = list(inp)
+        input_item_list = []
+        index_list = []
+
+        for i in range(self.item_number):
+            if float(input_list[i]) == float(1):
+                input_item_list.append(self.item_list[i])
+                index_list.append(i)
+                
+        item_num = len(input_item_list)
+        com = itertools.combinations(range(item_num),2)
+        output_matrix = np.zeros([item_num, item_num], dtype = float)
+        
+        for c in com:
+            i = c[0]
+            j = c[1]
+            index_i = index_list[i]
+            index_j = index_list[j]
+            output_matrix[i,j] = math.exp(output[self.dataset.from_ij_get_index(index_i,index_j)])
+            output_matrix[j,i] = output_matrix[i,j]            
+
+        if pandas == False:
+            return torch.from_numpy(output_matrix)
+        else:
+            return pd.DataFrame(output_matrix, columns = input_item_list, index = input_item_list)
+    
 
    
         
@@ -294,16 +417,12 @@ def l2_penalty(var):
     return torch.sqrt(torch.pow(var,2).sum())
 
 
-
-
 ##########################################################################
 lifelog_itemlist = "/home/li/datasets/lifelog/itemlist.csv"
 lifelog_data = pd.read_csv(lifelog_itemlist)
 group_path = "/home/li/datasets/lifelog/Group1_64.txt"
 group_list = []
 group_item_name_list = []
-
-
 
 with open(group_path,"r") as g_f:
     for line in g_f.readlines():
@@ -329,17 +448,16 @@ if __name__ == '__main__':
 
     ############## Data Preparation ###################
 
-    model_path = "/home/li/torch/model/attention_net_u_nakamura_Q_9_K_3_F_5_CV.model"
-    username = "nakamura"
+    model_path = "/home/li/torch/model/linear_net_u_nakamura_F_5_CV.model"
+    user = "nakamura"
 
     input_csv = "/home/li/torch/data/Data_Input_164_nakamura_20190605.csv"
     output_csv = "/home/li/torch/data/Data_Output_164_nakamura_20190605.csv"
 
-    plot_path = "/home/li/torch/figure/output/object_8_nakamura_output_mds_figure.png"
-    csv_path = "/home/li/torch/figure/output/object_8_nakamura_output_distance.csv"
+    plot_path = "/home/li/torch/normal_net/figure/output/object_8_nakamura_output_mds_figure.png"
+    csv_path = "/home/li/torch/normal_net/figure/output/object_8_nakamura_output_distance.csv"
 
-    bar_path = "/home/li/torch/figure/distribution/bar_graph_nakamura.png"
-    item_name_path = "/home/li/torch/figure/distribution/item_name_nakamura.txt"
+    item_name_path = "/home/li/torch/normal_net/figure/output/item_name_nakamura.txt"
     
     model = torch.load(model_path)
     model.eval()
