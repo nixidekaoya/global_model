@@ -142,8 +142,9 @@ class GlobalModelDataset(Dataset):
         
 
 ##################### Attention Net Class #######################
+        
 class Attention_Net(nn.Module):
-    def __init__(self,dataset,params = (5,10,8)):
+    def __init__(self,dataset,params = (5,10,8), activation = "sigmoid"):
         super(Attention_Net,self).__init__()
         self.dataset = dataset
         self.item_list = dataset.item_list
@@ -154,6 +155,12 @@ class Attention_Net(nn.Module):
         self.key_dim = int(params[1])
         self.feature_dim = int(params[2])
         self.linear_layer1 = nn.Linear(self.item_number,self.query_dim)
+
+        if activation == "sigmoid":
+            self.act = nn.Sigmoid()
+        elif activation == "relu":
+            self.act = nn.ReLU(True)
+        
         self.key_matrix = torch.nn.Parameter(torch.randn(self.query_dim,self.key_dim))
         self.value_matrix = torch.nn.Parameter(torch.randn(self.key_dim,self.feature_dim))
         self.linear_layer2 = nn.Linear(self.feature_dim, self.output_dim)
@@ -173,6 +180,7 @@ class Attention_Net(nn.Module):
         #print(mask.shape)
         
         x = self.linear_layer1(x)
+        x = self.act(x)
         x = x.mm(self.key_matrix)
         x = F.softmax(x,dim = 1)
         self.distribute = x
@@ -210,6 +218,8 @@ class Attention_Net(nn.Module):
 
     def get_output_mask(self,x):
 
+        #print(x)
+
         mask = []
         x = x.data.numpy()
 
@@ -228,6 +238,7 @@ class Attention_Net(nn.Module):
         mask = torch.from_numpy(np.array(mask)).float()
         #print(mask.shape)
         return mask
+
 
     def get_output_matrix(self, inp, output, pandas = False):
 
@@ -250,10 +261,12 @@ class Attention_Net(nn.Module):
 
     def get_output_small_matrix(self, inp, output, pandas = False):
 
+        print(inp)
         output_mask = self.get_output_mask(inp)
         output = output.mul(output_mask)
         output = list(output[0].detach().numpy())
-        input_list = list(inp.squeeze())
+        
+        input_list = list(inp[0].detach().numpy())
         input_item_list = []
         index_list = []
 
@@ -265,8 +278,6 @@ class Attention_Net(nn.Module):
         item_num = len(input_item_list)
         com = itertools.combinations(range(item_num),2)
         output_matrix = np.zeros([item_num, item_num], dtype = float)
-        #print(output.shape)
-        #print(output_matrix.shape)
         
         for c in com:
             i = c[0]
@@ -277,13 +288,11 @@ class Attention_Net(nn.Module):
             output_matrix[j,i] = output_matrix[i,j]            
 
         if pandas == False:
-            return output_matrix
+            return torch.from_numpy(output_matrix)
         else:
             return pd.DataFrame(output_matrix, columns = input_item_list, index = input_item_list)
-        
+    
 
-   
-        
 
 ########### FUNCTIONS
 
@@ -312,6 +321,7 @@ with open(group_path,"r") as g_f:
 
 ################## PARAMS
 
+ACT = "sigmoid"
 BATCH_SIZE = 1
 LEARNING_RATE = 0.02
 WEIGHT_DECAY = torch.tensor(0.0001).float()
@@ -329,28 +339,38 @@ if __name__ == '__main__':
 
     ############## Data Preparation ###################
 
-    model_path = "/home/li/torch/model/attention_net_u_nakamura_Q_9_K_3_F_5_CV.model"
-    username = "nakamura"
+    model_path = "/home/li/torch/model/attention_net_u_artificial_Q_9_K_6_F_5_REG_L1_ACT_sigmoid_WD_0001_CV.model"
+    username = "artificial"
 
-    input_csv = "/home/li/torch/data/Data_Input_164_nakamura_20190605.csv"
-    output_csv = "/home/li/torch/data/Data_Output_164_nakamura_20190605.csv"
+    input_csv = "/home/li/torch/artificial_data/artificial_data_10000_class_1_4_X_Y_input.csv"
+    output_csv = "/home/li/torch/artificial_data/artificial_data_10000_class_1_4_X_Y_output.csv"
 
-    plot_path = "/home/li/torch/figure/output/object_8_nakamura_output_mds_figure.png"
-    csv_path = "/home/li/torch/figure/output/object_8_nakamura_output_distance.csv"
 
-    bar_path = "/home/li/torch/figure/distribution/bar_graph_nakamura.png"
-    item_name_path = "/home/li/torch/figure/distribution/item_name_nakamura.txt"
-    
-    model = torch.load(model_path)
+    extra = "20190617"
+    plot_path = "/home/li/torch/figure/attention_net/output/" + str(extra) + "_object_8_" + str(username) + "_output_mds_figure.png"
+    csv_path = "/home/li/torch/figure/attention_net/output/"+ str(extra) + "_object_8_" + str(username) + "_output_distance.csv"
+
+    bar_path = "/home/li/torch/figure/attention_net/distribution/"+ str(extra) + "_bar_graph_" + str(username) + ".png"
+    item_name_path = "/home/li/torch/figure/attention_net/distribution/" + str(extra) + "_item_name_" + str(username) + ".txt"
+
+
+    dataset = GlobalModelDataset(input_csv, output_csv)
+
+    params = (9,6,5)
+
+    model = Attention_Net(dataset, params, activation = ACT)
+    model.load_state_dict(torch.load(model_path))
     model.eval()
+    
 
     item_list = model.item_list
-    dataset = GlobalModelDataset(input_csv, output_csv)
+
+    print(item_list)
+    
 
     embedding = MDS(n_components = 2, dissimilarity = "precomputed")
 
-    input_sample = random.sample(range(64),OBJECT_NUM)
-
+    input_sample = random.sample(range(64), OBJECT_NUM)
     #input_sample = [4,14,45,62,35,22,54,23]
         
     input_name_list = []
@@ -367,10 +387,11 @@ if __name__ == '__main__':
             input_test.append(1)
         else:
             input_test.append(0)
-    input_test = torch.from_numpy(np.array(input_test)).unsqueeze(0).float()
-    output,dist = model.forward(input_test)
-    output_matrix = model.get_output_small_matrix(input_test, output, pandas = False)
-    output_df = model.get_output_small_matrix(input_test, output, pandas = True)
+    
+    input_torch= torch.from_numpy(np.array(input_test)).unsqueeze(0).float()
+    output,dist = model.forward(input_torch)
+    output_matrix = model.get_output_small_matrix(input_torch, output, pandas = False)
+    output_df = model.get_output_small_matrix(input_torch, output, pandas = True)
     pos = embedding.fit_transform(output_matrix)
 
     dist = list(dist[0].detach().numpy())

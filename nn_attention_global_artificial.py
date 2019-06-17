@@ -474,7 +474,7 @@ def get_inner_class_distance(df, sample_list, order = 2):
     distance = distance/float(com_number)
     return distance
 
-def get_inter_class_distance(df, class_1_list, class_2_list, order = 2):
+def get_inter_class_distance(df, class_1_list, class_2_list, order = 1):
     distance = 0
     class_1_num = len(class_1_list)
     class_2_num = len(class_2_list)
@@ -488,7 +488,7 @@ def get_inter_class_distance(df, class_1_list, class_2_list, order = 2):
     distance = distance/class_1_num
     return distance
 
-def evaluate_model_inner_inter_distance(model, sample_number = 10, combines = (4,4), order = 2):
+def evaluate_model_inner_inter_distance(model, sample_number = 10, combines = (4,4), order = 1):
     class_1_inner_distance_list = []
     class_2_inner_distance_list = []
     class_1_star_inner_distance_list = []

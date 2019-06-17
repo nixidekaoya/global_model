@@ -136,15 +136,13 @@ class GlobalModelDataset(Dataset):
             return self.com_list.index(ij)
         else:
 
-
             return -1
             
         
 
 ##################### Attention Net Class #######################
-        
 class Attention_Net(nn.Module):
-    def __init__(self,dataset,params = (5,10,8)):
+    def __init__(self,dataset,params = (5,10,8), activation = "sigmoid"):
         super(Attention_Net,self).__init__()
         self.dataset = dataset
         self.item_list = dataset.item_list
@@ -155,6 +153,12 @@ class Attention_Net(nn.Module):
         self.key_dim = int(params[1])
         self.feature_dim = int(params[2])
         self.linear_layer1 = nn.Linear(self.item_number,self.query_dim)
+
+        if activation == "sigmoid":
+            self.act = nn.Sigmoid()
+        elif activation == "relu":
+            self.act = nn.ReLU(True)
+        
         self.key_matrix = torch.nn.Parameter(torch.randn(self.query_dim,self.key_dim))
         self.value_matrix = torch.nn.Parameter(torch.randn(self.key_dim,self.feature_dim))
         self.linear_layer2 = nn.Linear(self.feature_dim, self.output_dim)
@@ -174,6 +178,7 @@ class Attention_Net(nn.Module):
         #print(mask.shape)
         
         x = self.linear_layer1(x)
+        x = self.act(x)
         x = x.mm(self.key_matrix)
         x = F.softmax(x,dim = 1)
         self.distribute = x
@@ -250,21 +255,16 @@ class Attention_Net(nn.Module):
             return pd.DataFrame(output_matrix, columns = self.item_list, index = self.item_list)
 
     def get_output_small_matrix(self, inp, output, pandas = False):
-
         output_mask = self.get_output_mask(inp)
         output = output.mul(output_mask)
-
-        output = list(output[0].detach().numpy())
-        print(inp.shape)
-        input_list = list(inp[0].detach().numpy())
+        input_list = list(inp)
         input_item_list = []
         index_list = []
-
         for i in range(self.item_number):
             if float(input_list[i]) == float(1):
                 input_item_list.append(self.item_list[i])
                 index_list.append(i)
-                
+        
         item_num = len(input_item_list)
         com = itertools.combinations(range(item_num),2)
         output_matrix = np.zeros([item_num, item_num], dtype = float)
@@ -281,7 +281,6 @@ class Attention_Net(nn.Module):
             return torch.from_numpy(output_matrix)
         else:
             return pd.DataFrame(output_matrix, columns = input_item_list, index = input_item_list)
-        
 
     
 ######## Non Attention Net Class
