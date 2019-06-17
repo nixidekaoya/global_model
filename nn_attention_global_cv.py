@@ -142,7 +142,7 @@ class GlobalModelDataset(Dataset):
 ##################### Attention Net Class #######################
         
 class Attention_Net(nn.Module):
-    def __init__(self,dataset,params = (5,10,8)):
+    def __init__(self,dataset,params = (5,10,8), activation = "sigmoid"):
         super(Attention_Net,self).__init__()
         self.dataset = dataset
         self.item_list = dataset.item_list
@@ -153,6 +153,12 @@ class Attention_Net(nn.Module):
         self.key_dim = int(params[1])
         self.feature_dim = int(params[2])
         self.linear_layer1 = nn.Linear(self.item_number,self.query_dim)
+
+        if activation == "sigmoid":
+            self.act = nn.Sigmoid()
+        elif activation == "relu":
+            self.act = nn.ReLU(True)
+        
         self.key_matrix = torch.nn.Parameter(torch.randn(self.query_dim,self.key_dim))
         self.value_matrix = torch.nn.Parameter(torch.randn(self.key_dim,self.feature_dim))
         self.linear_layer2 = nn.Linear(self.feature_dim, self.output_dim)
@@ -172,6 +178,7 @@ class Attention_Net(nn.Module):
         #print(mask.shape)
         
         x = self.linear_layer1(x)
+        x = self.act(x)
         x = x.mm(self.key_matrix)
         x = F.softmax(x,dim = 1)
         self.distribute = x
@@ -581,26 +588,27 @@ L2 = "L2"
 MSE = "MSE"
 ATTENTION = "attention_net"
 LINEAR = "linear_net"
+RELU = "relu"
+SIGMOID = "sigmoid"
 
 
 ## Train Params
-NET = LINEAR
+NET = ATTENTION
 BATCH_SIZE = 1
 LEARNING_RATE = 0.1
-WEIGHT_DECAY = torch.tensor(0.00001).float()
+WEIGHT_DECAY = torch.tensor(0.0001).float()
 QUERY_DIM = 9
-KEY_DIM = 3
+KEY_DIM = 6
 FEATURE_DIM = 5
-EPOCH = 50
+EPOCH = 40
 MOMENTUM = 0.9
-REG = L0
+REG = L1
+ACT = SIGMOID
+OPTIMIZER = SGD
 
 ## Evaluation Params
-CV_NUM = 5
 EVA_SAMPLE_NUMBER = 30
-EPOCH = 50
 BETAS = (0.9,0.999)
-REG = L1
 LOSS = MSE
 CV_NUM = 4
 
@@ -611,7 +619,10 @@ if __name__ == '__main__':
     ############## Data Preparation ###################
     username = "nakamura"
     
-    model_path = "/home/li/torch/model/" + str(NET) + "_u_" + str(username) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_CV.model" 
+    model_path = "/home/li/torch/model/" + str(NET) + "_u_" + str(username) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_ACT_" + str(ACT) + "_CV.model" 
+
+    train_log_path = "/home/li/torch/model/train_log/" + str(NET) + "_u_" + str(username) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_ACT_" + str(ACT) + ".txt" 
+
 
     input_csv = "/home/li/torch/data/Data_Input_164_nakamura_20190605.csv"
     output_csv = "/home/li/torch/data/Data_Output_164_nakamura_20190605.csv"
@@ -647,7 +658,7 @@ if __name__ == '__main__':
 
     ## Attention Net
     if NET == ATTENTION:
-        net = Attention_Net(dataset, params)
+        net = Attention_Net(dataset, params, activation = ACT)
     ## Linear Net
     elif NET == LINEAR:
         net = Linear_Net(dataset, FEATURE_DIM)
@@ -655,8 +666,10 @@ if __name__ == '__main__':
 
 
     ## Optimizer
-    optimizer = torch.optim.SGD(net.parameters(), lr = LEARNING_RATE, momentum = MOMENTUM)
-    #optimizer = torch.optim.Adam(net.parameters(), lr = LEARNING_RATE, betas = BETAS)
+    if OPTIMIZER == SGD:
+        optimizer = torch.optim.SGD(net.parameters(), lr = LEARNING_RATE, momentum = MOMENTUM)
+    elif OPTIMIZER == ADAM:
+        optimizer = torch.optim.Adam(net.parameters(), lr = LEARNING_RATE, betas = BETAS)
 
     ## Loss
     loss_function = torch.nn.MSELoss()
@@ -697,7 +710,7 @@ if __name__ == '__main__':
                     l2_regularization = torch.tensor(0).float()
 
                     if NET == ATTENTION:
-                        out,dis = net.forward(im)
+                        out,dist = net.forward(im)
                     elif NET == LINEAR:
                         out = net.forward(im)
                     mse_loss = loss_function(out,label)
@@ -751,6 +764,10 @@ if __name__ == '__main__':
         info2 = "Epoch: " + str(epoch) + " , Test Loss: " + str(test_loss)
         print(info1)
         print(info2)
+        if NET == ATTENTION:
+            info3 = "Epoch: " + str(epoch) + " , Distribution: " + str(dist)
+        print(info3)
+        
 
 
     torch.save(net, model_path)

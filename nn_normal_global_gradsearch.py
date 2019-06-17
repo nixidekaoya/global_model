@@ -149,9 +149,11 @@ class Attention_Net(nn.Module):
         self.key_dim = int(params[1])
         self.feature_dim = int(params[2])
         self.linear_layer1 = nn.Linear(self.item_number,self.query_dim)
+        self.relu1 = nn.ReLU(True)
         self.key_matrix = torch.nn.Parameter(torch.randn(self.query_dim,self.key_dim))
         self.value_matrix = torch.nn.Parameter(torch.randn(self.key_dim,self.feature_dim))
         self.linear_layer2 = nn.Linear(self.feature_dim, self.output_dim)
+        self.relu2 = nn.ReLU(True)
 
         #Initialization
         init.xavier_uniform(self.linear_layer1.weight)
