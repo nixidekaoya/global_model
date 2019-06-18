@@ -102,8 +102,10 @@ class_4_list = range(96,128)
 #### Class
 class_list = list(class_1_list) + list(class_4_list)
 
-coord_1_coeff = 1
-coord_2_coeff = 1
+XOY_coord_1_coeff = 1
+XOY_coord_2_coeff = 1
+XOZ_coord_1_coeff = 1
+XOZ_coord_2_coeff = 1
 
 
 extra = "_class_1_4_X_Y"
@@ -120,11 +122,14 @@ y_list = data_df['Y']
 z_list = data_df['Z']
 
 ####### Projection
-c1_coord_list = x_list * coord_1_coeff
-c2_coord_list = z_list * coord_2_coeff
+XOZ_c1_coord_list = x_list * XOY_coord_1_coeff
+XOZ_c2_coord_list = z_list * XOY_coord_2_coeff
 
-print(c1_coord_list)
-print(c2_coord_list)
+XOY_c1_coord_list = x_list * XOZ_coord_1_coeff
+XOY_c2_coord_list = y_list * XOZ_coord_2_coeff
+
+#print(c1_coord_list)
+#print(c2_coord_list)
 
 com = itertools.combinations(range(64),2)
 com_list = []
@@ -135,7 +140,18 @@ input_matrix = []
 output_matrix = []
 
 for i in range(data_number):
-    random_list = random.sample(class_list, 8)
+    group_rand = random.randint(0,1)
+    if group_rand == 0:
+        random_list = random.sample(class_1_list, 8)
+        c1_coord_list = XOY_c1_coord_list
+        c2_coord_list = XOY_c2_coord_list
+    elif group_rand == 1:
+        random_list_1 = random.sample(class_1_list,4)
+        random_list_2 = random.sample(class_4_list,4)
+        random_list = random_list_1 + random_list_2
+        c1_coord_list = XOZ_c1_coord_list
+        c2_coord_list = XOZ_c2_coord_list
+
 
     input_array = []
     for j in range(len(class_list)):
