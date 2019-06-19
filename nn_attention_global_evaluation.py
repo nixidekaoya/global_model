@@ -27,6 +27,7 @@ from torchvision import transforms
 from sklearn.manifold import MDS
 
 from neural_network import Attention_Net
+from neural_network import Linear_Net
 from datasets import GlobalModelDataset
 
 
@@ -75,14 +76,14 @@ if __name__ == '__main__':
 
     ############## Data Preparation ###################
 
-    model_path = "/home/li/torch/model/attention_net_u_artificial_Q_9_K_6_F_5_REG_L1_ACT_sigmoid_WD_0001_CV.model"
+    model_path = "/home/li/torch/model/attention_net_u_artificial_Q_9_K_6_F_5_REG_L0_ACT_sigmoid_WD_00001_CV.model"
     username = "artificial"
 
     input_csv = "/home/li/torch/artificial_data/artificial_data_10000_class_1_4_X_Y_input.csv"
     output_csv = "/home/li/torch/artificial_data/artificial_data_10000_class_1_4_X_Y_output.csv"
 
 
-    extra = "20190617"
+    extra = "20190618"
     plot_path = "/home/li/torch/figure/attention_net/output/" + str(extra) + "_object_8_" + str(username) + "_output_mds_figure.png"
     csv_path = "/home/li/torch/figure/attention_net/output/"+ str(extra) + "_object_8_" + str(username) + "_output_distance.csv"
 
@@ -97,6 +98,11 @@ if __name__ == '__main__':
     model = Attention_Net(dataset, params, activation = ACT)
     model.load_state_dict(torch.load(model_path))
     model.eval()
+
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            print(name, param.data)
+        
     
 
     item_list = model.item_list
