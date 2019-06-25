@@ -483,7 +483,7 @@ with open(group_path,"r") as g_f:
 
 
 if __name__ == '__main__':
-    grad_search_path = "/home/li/torch/grad_search/20190618/"
+    grad_search_path = "/home/li/torch/grad_search/20190624/"
     grad_search_result_csv_path = grad_search_path + "result.csv"
     backup_path = grad_search_path + "backup.txt"
     plot_path = grad_search_path + "parameters_plot.txt"
@@ -499,6 +499,7 @@ if __name__ == '__main__':
     
     dataset = GlobalModelDataset(input_csv, output_csv)
     data_num = dataset.data_num
+    print(data_num)
 
     sample_data_num = int(data_num/CV_NUM)
 

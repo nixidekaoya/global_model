@@ -109,7 +109,6 @@ if __name__ == '__main__':
 
     print(item_list)
     
-
     embedding = MDS(n_components = 2, dissimilarity = "precomputed")
 
     input_sample = random.sample(range(64), OBJECT_NUM)
