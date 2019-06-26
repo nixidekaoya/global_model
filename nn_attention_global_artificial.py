@@ -481,15 +481,14 @@ with open(group_path,"r") as g_f:
         group_item_name_list.append(lifelog_data.loc[int(line.strip()) - 1,"Name"])
 
 
-
 if __name__ == '__main__':
-    grad_search_path = "/home/li/torch/grad_search/20190624/"
+    grad_search_path = "/home/li/torch/grad_search/20190626/"
     grad_search_result_csv_path = grad_search_path + "result.csv"
     backup_path = grad_search_path + "backup.txt"
     plot_path = grad_search_path + "parameters_plot.txt"
 
-    input_csv = "/home/li/torch/artificial_data/artificial_data_10000_class_1_4_X_Y_input.csv"
-    output_csv = "/home/li/torch/artificial_data/artificial_data_10000_class_1_4_X_Y_output.csv"
+    input_csv = "/home/li/torch/artificial_data/artificial_data_2000_class_1_4_XoY_XoZ_input.csv"
+    output_csv = "/home/li/torch/artificial_data/artificial_data_2000_class_1_4_XoY_XoZ_output.csv"
     
     if not os.path.exists(grad_search_path):
         os.mkdir(grad_search_path)
