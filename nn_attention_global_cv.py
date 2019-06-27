@@ -204,7 +204,7 @@ L0 = "L0"
 L1 = "L1"
 L2 = "L2"
 MSE = "MSE"
-WD = "00001"
+WD = "00002"
 ATTENTION = "attention_net"
 LINEAR = "linear_net"
 RELU = "relu"
@@ -215,11 +215,11 @@ SIGMOID = "sigmoid"
 NET = ATTENTION
 BATCH_SIZE = 10
 LEARNING_RATE = 0.05
-WEIGHT_DECAY = torch.tensor(0.00001).float()
+WEIGHT_DECAY = torch.tensor(0.00002).float()
 QUERY_DIM = 9
 KEY_DIM = 6
 FEATURE_DIM = 5
-EPOCH = 30
+EPOCH = 100
 MOMENTUM = 0.9
 REG = L0
 ACT = SIGMOID
@@ -233,17 +233,15 @@ CV_NUM = 4
 
 
 if __name__ == '__main__':
-
-    
     ############## Data Preparation ###################
     username = "artificial"
 
-    extra = "Artificial_Data_"
+    extra = "Artificial_Data_2000_epoch_" + str(EPOCH)
     model_path = "/home/li/torch/model/" + str(NET) + "_u_" + str(username) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_ACT_" + str(ACT) + "_WD_" + str(WD) + "_CV.model" 
     train_log_path = "/home/li/torch/model/train_log/"  + str(NET) + "_u_" + str(username) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_ACT_" + str(ACT) + "_WD_" + str(WD) + ".txt" 
 
-    input_csv = "/home/li/torch/artificial_data/artificial_data_10000_class_1_4_X_Y_input.csv"
-    output_csv = "/home/li/torch/artificial_data/artificial_data_10000_class_1_4_X_Y_output.csv"
+    input_csv = "/home/li/torch/artificial_data/artificial_data_2000_class_1_4_XoY_XoZ_input.csv"
+    output_csv = "/home/li/torch/artificial_data/artificial_data_2000_class_1_4_XoY_XoZ_output.csv"
     dataset = GlobalModelDataset(input_csv, output_csv)
 
     data_num = dataset.data_num
