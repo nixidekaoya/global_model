@@ -39,6 +39,34 @@ def l1_penalty(var):
 def l2_penalty(var):
     return torch.sqrt(torch.pow(var,2).sum())
 
+def get_inner_class_distance(df, sample_list, order = 1):
+    distance = 0
+    list_num = len(sample_list)
+    combines = itertools.combinations(sample_list,2)
+    com_number = 0
+    for combine in combines:
+        #print("haha")
+        d = df.loc[combine[0],combine[1]]
+        com_number += 1
+        #print(combine)
+        distance += pow(float(d), order)
+    #print(com_number)
+    distance = distance/float(com_number)
+    return distance
+
+def get_inter_class_distance(df, class_1_list, class_2_list, order = 1):
+    distance = 0
+    class_1_num = len(class_1_list)
+    class_2_num = len(class_2_list)
+    for name_i in class_1_list:
+        inter_d = 0
+        for name_j in class_2_list:
+            d = df.loc[str(name_i),str(name_j)]
+            inter_d += pow(float(d), order)
+        inter_d = inter_d/class_2_num
+        distance += inter_d
+    distance = distance/class_1_num
+    return distance
 
 
 
@@ -69,6 +97,8 @@ FEATURE_DIM = 8
 CV_NUM = 5
 OBJECT_NUM = 8
 
+TEST_NUMBER = 100
+
 test_csv_file = "/home/li/torch/csv/test_csv.csv"
 
 
@@ -76,20 +106,23 @@ if __name__ == '__main__':
 
     ############## Data Preparation ###################
 
-    model_path = "/home/li/torch/model/attention_net_u_artificial_Q_9_K_6_F_5_REG_L0_ACT_sigmoid_WD_00001_CV.model"
+    model_path = "/home/li/torch/model/attention_net_u_artificial_Q_9_K_6_F_5_REG_L0_ACT_sigmoid_WD_00002_CV.model"
     username = "artificial"
 
-    input_csv = "/home/li/torch/artificial_data/artificial_data_10000_class_1_4_X_Y_input.csv"
-    output_csv = "/home/li/torch/artificial_data/artificial_data_10000_class_1_4_X_Y_output.csv"
+    input_csv = "/home/li/torch/artificial_data/artificial_data_2000_class_1_4_XoY_XoZ_input.csv"
+    output_csv = "/home/li/torch/artificial_data/artificial_data_2000_class_1_4_XoY_XoZ_output.csv"
+
+    extra = "20190626"
+    evaluation_path = "/home/li/torch/evaluation/"
+    
+    plot_path = "/home/li/torch/evaluation/" + str(extra) + "_object_8_" + str(username) + "_output_mds_figure.png"
+    csv_path = "/home/li/torch/evaluation/"+ str(extra) + "_object_8_" + str(username) + "_output_distance.csv"
+
+    bar_path = "/home/li/torch/evaluation/"+ str(extra) + "_bar_graph_" + str(username) + ".png"
+    item_name_path = "/home/li/torch/evaluation/" + str(extra) + "_item_name_" + str(username) + ".txt"
 
 
-    extra = "20190618"
-    plot_path = "/home/li/torch/figure/attention_net/output/" + str(extra) + "_object_8_" + str(username) + "_output_mds_figure.png"
-    csv_path = "/home/li/torch/figure/attention_net/output/"+ str(extra) + "_object_8_" + str(username) + "_output_distance.csv"
-
-    bar_path = "/home/li/torch/figure/attention_net/distribution/"+ str(extra) + "_bar_graph_" + str(username) + ".png"
-    item_name_path = "/home/li/torch/figure/attention_net/distribution/" + str(extra) + "_item_name_" + str(username) + ".txt"
-
+    coeff_path = "/home/li/torch/coefficient_log.txt"
 
     dataset = GlobalModelDataset(input_csv, output_csv)
 
@@ -107,64 +140,142 @@ if __name__ == '__main__':
 
     item_list = model.item_list
 
+    class_1_list = item_list[:32]
+    class_2_list = item_list[32:]
+
     print(item_list)
     
     embedding = MDS(n_components = 2, dissimilarity = "precomputed")
 
-    input_sample = random.sample(range(64), OBJECT_NUM)
-    #input_sample = [4,14,45,62,35,22,54,23]
+    d11_list = []
+    d22_list = []
+    d11_star_list = []
+    d22_star_list = []
+    d12_star_list = []
+    
+
+    for i in range(TEST_NUMBER):
+        ## Group 1
+
+        group1_list = random.sample(class_1_list, 8)
+
+        input_test = []
+        for item in item_list:
+            if item in group1_list:
+                input_test.append(1)
+            else:
+                input_test.append(0)
+    
+        input_torch = torch.from_numpy(np.array(input_test)).unsqueeze(0).float()
+        output,dist = model.forward(input_torch)
+        output_large_matrix = model.get_output_matrix(input_torch, output, pandas = True)
+        output_matrix = model.get_output_small_matrix(input_torch, output, pandas = False)
+        output_df = model.get_output_small_matrix(input_torch, output, pandas = True)
+
+        d11 = get_inner_class_distance(output_large_matrix, group1_list, order = 1)
+        d11_list.append(d11)
+        #pos = embedding.fit_transform(output_matrix)
+        dist = list(dist[0].detach().numpy())
+
+        csv_path = evaluation_path + "group1_test" + str(i) + ".csv"
+        output_df.to_csv(csv_path)
+
+        bar_path = evaluation_path + "group1_test_bar" + str(i) + ".png"
+        plt.bar(range(len(dist)), dist, color = 'b')
+        plt.savefig(bar_path)
+        plt.close('all')
+
+        ## Group 2
+        group2_list = random.sample(class_2_list, 8)
+
+        input_test = []
+        for item in item_list:
+            if item in group2_list:
+                input_test.append(1)
+            else:
+                input_test.append(0)
+
+        input_torch = torch.from_numpy(np.array(input_test)).unsqueeze(0).float()
+        output,dist = model.forward(input_torch)
+        output_large_matrix = model.get_output_matrix(input_torch, output, pandas = True)
+        output_matrix = model.get_output_small_matrix(input_torch, output, pandas = False)
+        output_df = model.get_output_small_matrix(input_torch, output, pandas = True)
+
+        d22 = get_inner_class_distance(output_large_matrix, group2_list, order = 1)
+        d22_list.append(d22)
+        #pos = embedding.fit_transform(output_matrix)
+        dist = list(dist[0].detach().numpy())
+
+        csv_path = evaluation_path + "group2_test" + str(i) + ".csv"
+        output_df.to_csv(csv_path)
+
+        bar_path = evaluation_path + "group2_test_bar" + str(i) + ".png"
+        plt.bar(range(len(dist)), dist, color = 'b')
+        plt.savefig(bar_path)
+        plt.close('all')
+
+
+        ## Group 3
+
+        group31_list = random.sample(group1_list, 4)
+        group32_list = random.sample(group2_list, 4)
+        group3_list = group31_list + group32_list
+
+        input_test = []
+        for item in item_list:
+            if item in group3_list:
+                input_test.append(1)
+            else:
+                input_test.append(0)
+
+        input_torch = torch.from_numpy(np.array(input_test)).unsqueeze(0).float()
+        output,dist = model.forward(input_torch)
+        output_large_matrix = model.get_output_matrix(input_torch, output, pandas = True)
+        output_matrix = model.get_output_small_matrix(input_torch, output, pandas = False)
+        output_df = model.get_output_small_matrix(input_torch, output, pandas = True)
+
         
-    input_name_list = []
-    for i in input_sample:
-        input_name_list.append(item_list[i])
+        d11_star = get_inner_class_distance(output_large_matrix, group31_list, order = 1)
+        d11_star_list.append(d11_star)
+        d22_star = get_inner_class_distance(output_large_matrix, group32_list, order = 1)
+        d22_star_list.append(d22_star)
+        d12_star = get_inter_class_distance(output_large_matrix, group31_list, group32_list, order = 1)
+        d12_star_list.append(d12_star)
 
-    with open(item_name_path, 'w') as item_f:
-        for item in input_name_list:
-            item_f.write(str(item) + "\r\n")
+        dist = list(dist[0].detach().numpy())
 
-    input_test = []
-    for item in item_list:
-        if item in input_name_list:
-            input_test.append(1)
-        else:
-            input_test.append(0)
-    
-    input_torch= torch.from_numpy(np.array(input_test)).unsqueeze(0).float()
-    output,dist = model.forward(input_torch)
-    output_matrix = model.get_output_small_matrix(input_torch, output, pandas = False)
-    output_df = model.get_output_small_matrix(input_torch, output, pandas = True)
-    pos = embedding.fit_transform(output_matrix)
+        csv_path = evaluation_path + "group3_test" + str(i) + ".csv"
+        output_df.to_csv(csv_path)
 
-    dist = list(dist[0].detach().numpy())
+        bar_path = evaluation_path + "group3_test_bar" + str(i) + ".png"
+        plt.bar(range(len(dist)), dist, color = 'b')
+        plt.savefig(bar_path)
+        plt.close('all')
 
-    print(dist)
+    d11_mean = np.mean(d11_list)
+    d22_mean = np.mean(d22_list)
+    d11_star_mean = np.mean(d11_star_list)
+    d22_star_mean = np.mean(d22_star_list)
+    d12_star_mean = np.mean(d12_star_list)
 
-    x_list = []
-    y_list = []
-    for p in pos:
-        x_list.append(p[0])
-        y_list.append(p[1])
+    c1 = d11_star_mean / d11_mean
+    c2 = d22_star_mean / d22_mean
+    c3 = (d11_star_mean + d22_star_mean)/ (2 * d12_star_mean)
 
-    plt.scatter(x_list, y_list, c = "red", marker = "o")
-    for i in range(len(input_name_list)):
-        plt.annotate(input_name_list[i], tuple(pos[i]))
+    info01 = "d11 : " + str(d11_mean) + " , d22 : " + str(d22_mean)
+    info02 = "d11* : " + str(d11_star_mean) + " , d22* : " + str(d22_star_mean)
+    info03 = "d12* : " + str(d12_star_mean)
+    info1 = "c1: " + str(c1)
+    info2 = "c2: " + str(c2)
+    info3 = "c3: " + str(c3)
 
-    plt.xlim((-1,1))
-    plt.ylim((-1,1))
-    plt.savefig(plot_path)
-    
-    output_df.to_csv(csv_path)
-
-    plt.close('all')
-
-    plt.bar(range(len(dist)), dist, color = 'b')
-    plt.savefig(bar_path)
-    plt.close('all')
-
-    
-    
-    
-
+    with open(coeff_path, "w") as log_f:
+        log_f.write(info01 + "\r\n")
+        log_f.write(info02 + "\r\n")
+        log_f.write(info03 + "\r\n")
+        log_f.write(info1 + "\r\n")
+        log_f.write(info2 + "\r\n")
+        log_f.write(info3 + "\r\n")
     
 
         
