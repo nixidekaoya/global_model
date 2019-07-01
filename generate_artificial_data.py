@@ -183,7 +183,7 @@ plt.close()
 
 
 #################### Generate input output files
-data_number = 2000
+data_number = 10000
 item_number = 64
 class_1_list = range(32)
 class_2_list = range(32,64)
@@ -206,7 +206,7 @@ extra = "_class_1_4_XoY_XoZ"
 artificial_data_input_csv = "/home/li/torch/artificial_data/artificial_data_" + str(data_number) + str(extra) + "_input.csv"
 artificial_data_output_csv = "/home/li/torch/artificial_data/artificial_data_" + str(data_number) + str(extra) + "_output.csv"
 
-coefficient_log = "/home/li/torch/artificial_data/coefficient_log.txt"
+coefficient_log = "/home/li/torch/artificial_data/coefficient_log_" + str(data_number) + ".txt"
 
 data_df = pd.read_csv(artificial_data_path)
 data_info_df = pd.read_csv(artificial_data_info)

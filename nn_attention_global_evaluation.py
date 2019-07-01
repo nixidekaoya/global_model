@@ -106,13 +106,13 @@ if __name__ == '__main__':
 
     ############## Data Preparation ###################
 
-    model_path = "/home/li/torch/model/attention_net_u_artificial_Q_9_K_6_F_5_REG_L0_ACT_sigmoid_WD_00002_CV.model"
+    model_path = "/home/li/torch/model/Artificial_Data_6000_epoch_100_attention_net_u_artificial_Q_9_K_6_F_5_REG_L2_ACT_sigmoid_WD_00001_CV.model"
     username = "artificial"
-
+    
     input_csv = "/home/li/torch/artificial_data/artificial_data_2000_class_1_4_XoY_XoZ_input.csv"
     output_csv = "/home/li/torch/artificial_data/artificial_data_2000_class_1_4_XoY_XoZ_output.csv"
 
-    extra = "20190626"
+    extra = "datanumber_30000_L0/20190701"
     evaluation_path = "/home/li/torch/evaluation/"
     
     plot_path = "/home/li/torch/evaluation/" + str(extra) + "_object_8_" + str(username) + "_output_mds_figure.png"
@@ -121,8 +121,7 @@ if __name__ == '__main__':
     bar_path = "/home/li/torch/evaluation/"+ str(extra) + "_bar_graph_" + str(username) + ".png"
     item_name_path = "/home/li/torch/evaluation/" + str(extra) + "_item_name_" + str(username) + ".txt"
 
-
-    coeff_path = "/home/li/torch/coefficient_log.txt"
+    coeff_path = "/home/li/torch/artificial_data/coefficient_log_6000_test_L2_WD_00001.txt"
 
     dataset = GlobalModelDataset(input_csv, output_csv)
 
@@ -262,6 +261,7 @@ if __name__ == '__main__':
     c2 = d22_star_mean / d22_mean
     c3 = (d11_star_mean + d22_star_mean)/ (2 * d12_star_mean)
 
+    info0 = "Model: " + str(model_path)
     info01 = "d11 : " + str(d11_mean) + " , d22 : " + str(d22_mean)
     info02 = "d11* : " + str(d11_star_mean) + " , d22* : " + str(d22_star_mean)
     info03 = "d12* : " + str(d12_star_mean)
@@ -270,6 +270,7 @@ if __name__ == '__main__':
     info3 = "c3: " + str(c3)
 
     with open(coeff_path, "w") as log_f:
+        log_f.write(info0 + "\r\n")
         log_f.write(info01 + "\r\n")
         log_f.write(info02 + "\r\n")
         log_f.write(info03 + "\r\n")
