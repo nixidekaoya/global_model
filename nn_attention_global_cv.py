@@ -67,6 +67,24 @@ def get_inter_class_distance(df, class_1_list, class_2_list, order = 2):
     distance = distance/class_1_num
     return distance
 
+
+def get_entropy(dist_list):
+    data_number = len(dist_list)
+    data_dimension = len(dist_list[0])
+    prob_list = []
+    entropy = 0
+    for i in range(data_dimension):
+        prob_list.append(float(0))
+    for dist in dist_list:
+        prob_list[dist.index(max(dist))] += 1
+    for i in range(data_dimension):
+        prob_list[i] = float(prob_list[i])/data_number
+    for prob in prob_list:
+        if prob != float(0):
+            entropy += - prob * math.log(prob)
+    return entropy
+
+
 def evaluate_model_inner_inter_distance(model, sample_number = 10, combines = (4,4), order = 2):
     class_1_inner_distance_list = []
     class_2_inner_distance_list = []
@@ -189,8 +207,6 @@ group_list = []
 group_item_name_list = []
 
 
-
-
 with open(group_path,"r") as g_f:
     for line in g_f.readlines():
         group_list.append(int(line.strip()))
@@ -219,9 +235,9 @@ WEIGHT_DECAY = torch.tensor(0.000001).float()
 QUERY_DIM = 9
 KEY_DIM = 6
 FEATURE_DIM = 5
-EPOCH = 100
+EPOCH = 200
 MOMENTUM = 0.9
-REG = L2
+REG = L0
 ACT = SIGMOID
 OPTIMIZER = SGD
 
@@ -231,21 +247,27 @@ BETAS = (0.9,0.999)
 LOSS = MSE
 CV_NUM = 4
 
+TEST_NUMBER = 100
+
 
 if __name__ == '__main__':
     ############## Data Preparation ###################
     username = "artificial"
 
-    extra = "Artificial_Data_30000_epoch_" + str(EPOCH)
+    extra = "LI_Mofei_Data_200_LogF_True_epoch_" + str(EPOCH)
     model_path = "/home/li/torch/model/" + str(extra) + "_" +  str(NET) + "_u_" + str(username) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_ACT_" + str(ACT) + "_WD_" + str(WD) + "_CV.model" 
     train_log_path = "/home/li/torch/model/train_log/"  + str(NET) + "_u_" + str(username) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_ACT_" + str(ACT) + "_WD_" + str(WD) + ".txt" 
 
-    input_csv = "/home/li/torch/artificial_data/artificial_data_10000_class_1_4_XoY_XoZ_input.csv"
-    output_csv = "/home/li/torch/artificial_data/artificial_data_10000_class_1_4_XoY_XoZ_output.csv"
-    dataset = GlobalModelDataset(input_csv, output_csv)
+    input_csv = "/home/li/torch/data/Data_Input_200_LI_Mofei_20190518.csv"
+    output_csv = "/home/li/torch/data/Data_Output_200_LI_Mofei_20190518.csv"
+    dataset = GlobalModelDataset(input_csv, output_csv, log_function = True)
+
+    plot_path = "/home/li/torch/plot/20190703/"
+
+    evaluation_path = "/home/li/torch/evaluation/"
+    coeff_path = "/home/li/torch/artificial_data/coefficient_logF_True_LI_Mofei_2_test_" + str(NET) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_WD_" + str(WD) + ".txt"
 
     data_num = dataset.data_num
-
     sample_data_num = int(data_num/CV_NUM)
 
     train_data_num = data_num - sample_data_num
@@ -300,10 +322,15 @@ if __name__ == '__main__':
     #print(dataloader)
     train_loss_list = []
     test_loss_list = []
+    test_loss_log_list = []
+
+    entropy_list = []
     
     for epoch in range(EPOCH):
         train_loss_each_epoch_list = []
         test_loss_each_epoch_list = []
+
+        dist_list = []
 
         for i in range(CV_NUM):
             test_dataloader = dataloader_list[i]
@@ -355,9 +382,10 @@ if __name__ == '__main__':
             test_loss_each = 0
             net.eval()
             for im,label in test_dataloader:
-
                 if NET == ATTENTION:
                     out,dis = net.forward(im)
+                    dist = list(dis[0].detach().numpy())
+                    dist_list.append(dist)
                 elif NET == LINEAR:
                     out = net.forward(im)
                 #out = linear_net.forward(im)
@@ -366,18 +394,21 @@ if __name__ == '__main__':
 
             test_loss_each_epoch_list.append(test_loss_each)
 
+        entropy = get_entropy(dist_list)
+        entropy_list.append(entropy)
 
         train_loss = np.mean(train_loss_each_epoch_list)
         test_loss = np.mean(test_loss_each_epoch_list)
         train_loss_list.append(train_loss)
         test_loss_list.append(test_loss)
+        test_loss_log_list.append(math.log(test_loss))
 
         info1 = "Epoch: " + str(epoch) + " , Train Loss: " + str(train_loss)
         info2 = "Epoch: " + str(epoch) + " , Test Loss: " + str(test_loss)
         print(info1)
         print(info2)
         if NET == ATTENTION:
-            info3 = "Epoch: " + str(epoch) + " , Distribution: " + str(dist)
+            info3 = "Epoch: " + str(epoch) + " , Distribution: " + str(dis)
         print(info3)
         
         
@@ -385,9 +416,176 @@ if __name__ == '__main__':
     print(model_path)
     torch.save(net.state_dict(), model_path)
 
+    model = net
+
+    #### PLOT
+    figure = "Learning_Curve" 
+    plt_file = plot_path + str(figure) + "_" + str(extra) + "_" +  str(NET) + "_u_" + str(username) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_ACT_" + str(ACT) + "_WD_" + str(WD) + ".png"
+    #plt.plot(range(len(train_loss_list)), train_loss_list, label = "train loss")
+    plt.plot(range(len(test_loss_log_list)), test_loss_log_list, label = "test log loss")
+    plt.legend(loc = "upper right")
+    plt.savefig(plt_file)
+    plt.close('all')
+
+    figure = "Entropy_Curve"
+    plt_file = plot_path + str(figure) + "_" + str(extra) + "_" +  str(NET) + "_u_" + str(username) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_ACT_" + str(ACT) + "_WD_" + str(WD) + ".png"
+    plt.scatter(test_loss_log_list, entropy_list, label = "Entropy")
+    #plt.xlim((0,0.005))
+    plt.ylim((0,1))
+    plt.legend(loc = "upper right")
+    plt.savefig(plt_file)
+    plt.close('all')
 
 
+    ##### Test
+    item_list = model.item_list
+
+    class_1_list = item_list[:32]
+    class_2_list = item_list[32:]
+
+    print(item_list)
     
+    #embedding = MDS(n_components = 2, dissimilarity = "precomputed")
+
+    d11_list = []
+    d22_list = []
+    d11_star_list = []
+    d22_star_list = []
+    d12_star_list = []
+    
+
+    for i in range(TEST_NUMBER):
+        ## Group 1
+
+        group1_list = random.sample(class_1_list, 8)
+
+        input_test = []
+        for item in item_list:
+            if item in group1_list:
+                input_test.append(1)
+            else:
+                input_test.append(0)
+    
+        input_torch = torch.from_numpy(np.array(input_test)).unsqueeze(0).float()
+        output,dist = model.forward(input_torch)
+        output_large_matrix = model.get_output_matrix(input_torch, output, pandas = True)
+        output_matrix = model.get_output_small_matrix(input_torch, output, pandas = False)
+        output_df = model.get_output_small_matrix(input_torch, output, pandas = True)
+
+        d11 = get_inner_class_distance(output_large_matrix, group1_list, order = 1)
+        d11_list.append(d11)
+        #pos = embedding.fit_transform(output_matrix)
+        dist = list(dist[0].detach().numpy())
+
+        csv_path = evaluation_path + "group1_test" + str(i) + ".csv"
+        if i % 10 == 0:
+            output_df.to_csv(csv_path)
+
+        bar_path = evaluation_path + "group1_test_bar" + str(i) + ".png"
+        plt.bar(range(len(dist)), dist, color = 'b')
+        if i % 10 == 0:
+            plt.savefig(bar_path)
+        plt.close('all')
+
+        ## Group 2
+        group2_list = random.sample(class_2_list, 8)
+
+        input_test = []
+        for item in item_list:
+            if item in group2_list:
+                input_test.append(1)
+            else:
+                input_test.append(0)
+
+        input_torch = torch.from_numpy(np.array(input_test)).unsqueeze(0).float()
+        output,dist = model.forward(input_torch)
+        output_large_matrix = model.get_output_matrix(input_torch, output, pandas = True)
+        output_matrix = model.get_output_small_matrix(input_torch, output, pandas = False)
+        output_df = model.get_output_small_matrix(input_torch, output, pandas = True)
+
+        d22 = get_inner_class_distance(output_large_matrix, group2_list, order = 1)
+        d22_list.append(d22)
+        #pos = embedding.fit_transform(output_matrix)
+        dist = list(dist[0].detach().numpy())
+
+        csv_path = evaluation_path + "group2_test" + str(i) + ".csv"
+        if i % 10 == 0:
+            output_df.to_csv(csv_path)
+
+        bar_path = evaluation_path + "group2_test_bar" + str(i) + ".png"
+        plt.bar(range(len(dist)), dist, color = 'b')
+        if i % 10 == 0:
+            plt.savefig(bar_path)
+        plt.close('all')
+
+
+        ## Group 3
+
+        group31_list = random.sample(group1_list, 4)
+        group32_list = random.sample(group2_list, 4)
+        group3_list = group31_list + group32_list
+
+        input_test = []
+        for item in item_list:
+            if item in group3_list:
+                input_test.append(1)
+            else:
+                input_test.append(0)
+
+        input_torch = torch.from_numpy(np.array(input_test)).unsqueeze(0).float()
+        output,dist = model.forward(input_torch)
+        output_large_matrix = model.get_output_matrix(input_torch, output, pandas = True)
+        output_matrix = model.get_output_small_matrix(input_torch, output, pandas = False)
+        output_df = model.get_output_small_matrix(input_torch, output, pandas = True)
+
+        
+        d11_star = get_inner_class_distance(output_large_matrix, group31_list, order = 1)
+        d11_star_list.append(d11_star)
+        d22_star = get_inner_class_distance(output_large_matrix, group32_list, order = 1)
+        d22_star_list.append(d22_star)
+        d12_star = get_inter_class_distance(output_large_matrix, group31_list, group32_list, order = 1)
+        d12_star_list.append(d12_star)
+
+        dist = list(dist[0].detach().numpy())
+
+        csv_path = evaluation_path + "group3_test" + str(i) + ".csv"
+        if i % 10 == 0:
+            output_df.to_csv(csv_path)
+
+        bar_path = evaluation_path + "group3_test_bar" + str(i) + ".png"
+        plt.bar(range(len(dist)), dist, color = 'b')
+        if i % 10 == 0:
+            plt.savefig(bar_path)
+        plt.close('all')
+
+    d11_mean = np.mean(d11_list)
+    d22_mean = np.mean(d22_list)
+    d11_star_mean = np.mean(d11_star_list)
+    d22_star_mean = np.mean(d22_star_list)
+    d12_star_mean = np.mean(d12_star_list)
+
+    c1 = d11_star_mean / d11_mean
+    c2 = d22_star_mean / d22_mean
+    c3 = (d11_star_mean + d22_star_mean)/ (2 * d12_star_mean)
+
+    info0 = "Model: " + str(model_path)
+    info01 = "d11 : " + str(d11_mean) + " , d22 : " + str(d22_mean)
+    info02 = "d11* : " + str(d11_star_mean) + " , d22* : " + str(d22_star_mean)
+    info03 = "d12* : " + str(d12_star_mean)
+    info1 = "c1: " + str(c1)
+    info2 = "c2: " + str(c2)
+    info3 = "c3: " + str(c3)
+    info4 = "Entropy: " + str(entropy)
+ 
+    with open(coeff_path, "w") as log_f:
+        log_f.write(info0 + "\r\n")
+        log_f.write(info01 + "\r\n")
+        log_f.write(info02 + "\r\n")
+        log_f.write(info03 + "\r\n")
+        log_f.write(info1 + "\r\n")
+        log_f.write(info2 + "\r\n")
+        log_f.write(info3 + "\r\n")
+        log_f.write(info4 + "\r\n")
 
 
     

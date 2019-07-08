@@ -29,7 +29,7 @@ from sklearn.manifold import MDS
 
 ############### Dataset Class #####################
 class GlobalModelDataset(Dataset):
-    def __init__(self,input_csv,output_csv):
+    def __init__(self,input_csv,output_csv, log_function = True):
         self.input_data = pd.read_csv(input_csv)
         self.output_data = pd.read_csv(output_csv)
 
@@ -51,7 +51,10 @@ class GlobalModelDataset(Dataset):
                 if np.isnan(output[i]):
                     output[i] = float(0)
                 else:
-                    output[i] = math.log(output[i])
+                    if log_function:
+                        output[i] = math.log(output[i])
+                    else:
+                        output[i] = output[i]
             
             self.output_list.append(output)
 

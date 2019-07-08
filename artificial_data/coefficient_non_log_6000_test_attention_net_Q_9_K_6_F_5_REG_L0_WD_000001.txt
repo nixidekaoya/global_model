@@ -1,0 +1,8 @@
+Model: /home/li/torch/model/Artificial_Data_6000_LogF_False_epoch_200_attention_net_u_artificial_Q_9_K_6_F_5_REG_L0_ACT_sigmoid_WD_000001_CV.model
+d11 : 1.1843137543544495 , d22 : 1.546513971459503
+d11* : 1.1850936053990642 , d22* : 1.5423138502682803
+d12* : 2.5448682175890616
+c1: 1.0006584834818875
+c2: 0.9972841362776316
+c3: 0.5358641828320713
+Entropy: 0.0

@@ -183,7 +183,7 @@ plt.close()
 
 
 #################### Generate input output files
-data_number = 10000
+data_number = 500
 item_number = 64
 class_1_list = range(32)
 class_2_list = range(32,64)

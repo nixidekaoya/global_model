@@ -106,11 +106,11 @@ if __name__ == '__main__':
 
     ############## Data Preparation ###################
 
-    model_path = "/home/li/torch/model/Artificial_Data_6000_epoch_100_attention_net_u_artificial_Q_9_K_6_F_5_REG_L2_ACT_sigmoid_WD_00001_CV.model"
+    model_path = "/home/li/torch/model/Artificial_Data_30000_epoch_100_attention_net_u_artificial_Q_9_K_6_F_5_REG_L2_ACT_sigmoid_WD_000001_CV.model"
     username = "artificial"
     
-    input_csv = "/home/li/torch/artificial_data/artificial_data_2000_class_1_4_XoY_XoZ_input.csv"
-    output_csv = "/home/li/torch/artificial_data/artificial_data_2000_class_1_4_XoY_XoZ_output.csv"
+    input_csv = "/home/li/torch/artificial_data/artificial_data_10000_class_1_4_XoY_XoZ_input.csv"
+    output_csv = "/home/li/torch/artificial_data/artificial_data_10000_class_1_4_XoY_XoZ_output.csv"
 
     extra = "datanumber_30000_L0/20190701"
     evaluation_path = "/home/li/torch/evaluation/"
@@ -121,7 +121,7 @@ if __name__ == '__main__':
     bar_path = "/home/li/torch/evaluation/"+ str(extra) + "_bar_graph_" + str(username) + ".png"
     item_name_path = "/home/li/torch/evaluation/" + str(extra) + "_item_name_" + str(username) + ".txt"
 
-    coeff_path = "/home/li/torch/artificial_data/coefficient_log_6000_test_L2_WD_00001.txt"
+    coeff_path = "/home/li/torch/artificial_data/coefficient_log_30000_test_L2_WD_00001.txt"
 
     dataset = GlobalModelDataset(input_csv, output_csv)
 
