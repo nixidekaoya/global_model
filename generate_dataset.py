@@ -92,8 +92,8 @@ group_item_name_list = []
 
 
 DATA_ENLARGE_RATE = 30
-NOISE_LEVEL = 0.1
-NL = "01"
+NOISE_LEVEL = 0.3
+NL = "03"
 
 
 data_file_path = "/home/li/torch/data/Group1_li_mofei_no_200_20190520.csv"

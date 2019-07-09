@@ -254,18 +254,22 @@ if __name__ == '__main__':
     ############## Data Preparation ###################
     username = "artificial"
 
-    extra = "LI_Mofei_Data_200_LogF_True_epoch_" + str(EPOCH)
+    extra = "LI_Mofei_Data_6000_R_30_NL_03_LogF_True_epoch_" + str(EPOCH)
     model_path = "/home/li/torch/model/" + str(extra) + "_" +  str(NET) + "_u_" + str(username) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_ACT_" + str(ACT) + "_WD_" + str(WD) + "_CV.model" 
     train_log_path = "/home/li/torch/model/train_log/"  + str(NET) + "_u_" + str(username) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_ACT_" + str(ACT) + "_WD_" + str(WD) + ".txt" 
 
-    input_csv = "/home/li/torch/data/Data_Input_200_LI_Mofei_20190518.csv"
-    output_csv = "/home/li/torch/data/Data_Output_200_LI_Mofei_20190518.csv"
+    input_csv = "/home/li/torch/data/Data_Input_R_30_NL_03_6000_li_mofei_20190708.csv"
+    output_csv = "/home/li/torch/data/Data_Output_R_30_NL_03_6000_li_mofei_20190708.csv"
     dataset = GlobalModelDataset(input_csv, output_csv, log_function = True)
 
     plot_path = "/home/li/torch/plot/20190703/"
 
-    evaluation_path = "/home/li/torch/evaluation/"
-    coeff_path = "/home/li/torch/artificial_data/coefficient_logF_True_LI_Mofei_2_test_" + str(NET) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_WD_" + str(WD) + ".txt"
+    eva_extra = "LogF_True_NL_03_li_mofei"
+    evaluation_path = "/home/li/torch/evaluation/datanumber_6000_K_" + str(KEY_DIM) + "_" + str(REG) + str(eva_extra) + "/"
+    coeff_path = "/home/li/torch/artificial_data/coefficient_logF_True_LI_Mofei_6000_NL_03_test_" + str(NET) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_WD_" + str(WD) + ".txt"
+
+    if not os.path.exists(evaluation_path):
+        os.mkdir(evaluation_path)
 
     data_num = dataset.data_num
     sample_data_num = int(data_num/CV_NUM)
