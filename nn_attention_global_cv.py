@@ -271,7 +271,7 @@ if __name__ == '__main__':
     eva_extra = "LogF_True_NL_00_li_mofei"
     #eva_extra = "LogF_True_Artificial_epoch_" + str(EPOCH)
     evaluation_path = "/home/li/torch/evaluation/datanumber_200_K_" + str(KEY_DIM) + "_" + str(REG) + str(eva_extra) + "/"
-    coeff_path = "/home/li/torch/artificial_data/coefficient_logF_True_LI_Mofei_200_NL_00_test_" + str(NET) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_WD_" + str(WD) + ".txt"
+    coeff_path = "/home/li/torch/artificial_data/coefficient_logF_True_LI_Mofei_200_NL_00_test_" + str(NET) + "_epoch_" + str(EPOCH) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_WD_" + str(WD) + ".txt"
     #coeff_path = "/home/li/torch/artificial_data/coefficient_logF_True_" + str(NET) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_WD_" + str(WD) + "_EPOCH_" + str(EPOCH) + ".txt"
 
     if not os.path.exists(evaluation_path):
@@ -469,6 +469,8 @@ if __name__ == '__main__':
     d11_star_list = []
     d22_star_list = []
     d12_star_list = []
+
+    distribution_list = []
     
 
     for i in range(TEST_NUMBER):

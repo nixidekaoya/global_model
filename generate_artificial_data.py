@@ -153,7 +153,7 @@ plt.scatter(item_x_divide_list[1], item_y_divide_list[1], label = "Class 2")
 plt.scatter(item_x_divide_list[2], item_y_divide_list[2], label = "Class 3")
 plt.scatter(item_x_divide_list[3], item_y_divide_list[3], label = "Class 4")
 plt.title("XoY")
-plt.legend(loc = "upper right")
+plt.legend(loc = "upper center")
 plt.savefig(plt_file)
 plt.close()
 
@@ -164,7 +164,7 @@ plt.scatter(item_x_divide_list[1], item_z_divide_list[1], label = "Class 2")
 plt.scatter(item_x_divide_list[2], item_z_divide_list[2], label = "Class 3")
 plt.scatter(item_x_divide_list[3], item_z_divide_list[3], label = "Class 4")
 plt.title("XoZ")
-plt.legend(loc = "upper right")
+plt.legend(loc = "upper center")
 plt.savefig(plt_file)
 plt.close()
 
@@ -175,7 +175,7 @@ plt.scatter(item_y_divide_list[1], item_z_divide_list[1], label = "Class 2")
 plt.scatter(item_y_divide_list[2], item_z_divide_list[2], label = "Class 3")
 plt.scatter(item_y_divide_list[3], item_z_divide_list[3], label = "Class 4")
 plt.title("YoZ")
-plt.legend(loc = "upper right")
+plt.legend(loc = "upper center")
 plt.savefig(plt_file)
 plt.close()
 
@@ -183,7 +183,7 @@ plt.close()
 
 
 #################### Generate input output files
-data_number = 500
+data_number = 100
 item_number = 64
 class_1_list = range(32)
 class_2_list = range(32,64)

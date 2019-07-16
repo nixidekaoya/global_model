@@ -10,6 +10,10 @@ import os
 import matplotlib.pyplot as plt
 
 
+
+
+
+'''
 grad_search_path = "/home/li/torch/grad_search/20190604/"
 grad_search_result_csv_path = grad_search_path + "result.csv"
 backup_path = grad_search_path + "backup.txt"
@@ -51,3 +55,4 @@ plt.annotate(str(largest_c3_param), xy = ("c3",largest_c3))
 plt.annotate(str(least_c3_param), xy = ("c3",least_c3))
 plt.savefig(graph_file)
 plt.close()
+'''
