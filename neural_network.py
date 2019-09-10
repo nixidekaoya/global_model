@@ -82,7 +82,6 @@ class Attention_Net(nn.Module):
 
     def get_mask(self,x):
         #print(x.shape)
-        
         mask = []
         x = x.data.numpy()
 

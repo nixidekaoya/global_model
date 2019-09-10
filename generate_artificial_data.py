@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 class_number = 4
 item_number = 32
 total_number = class_number * item_number
+DATE = "20190911"
 
 class_product_list = [[0.2,0.2,1],[0.2,1,0.2],[1,0.2,0.2],[0.2,0.2,1]]
 class_bias_list = [[0,0,0],[0,0,0],[0,0,0],[0.8,0.8,0]]
@@ -23,8 +24,8 @@ data_info_df = pd.DataFrame()
 
 artificial_data_path = "/home/li/torch/artificial_data/artificial_data.csv"
 artificial_data_info = "/home/li/torch/artificial_data/artificial_data_info.csv"
-
 artificial_data_plot_path = "/home/li/torch/artificial_data/plot/"
+
 
 ############# FUNCTIONS
 def get_distance(c1,c2):
@@ -147,33 +148,33 @@ data_df.to_csv(artificial_data_path)
 ###PLOT scatter
 
 ## XOY
-plt_file = artificial_data_plot_path + "XoY_plot.png"
+plt_file = artificial_data_plot_path + "XoY_plot"+ str(DATE) + ".png"
 plt.scatter(item_x_divide_list[0], item_y_divide_list[0], label = "Class 1")
-plt.scatter(item_x_divide_list[1], item_y_divide_list[1], label = "Class 2")
-plt.scatter(item_x_divide_list[2], item_y_divide_list[2], label = "Class 3")
-plt.scatter(item_x_divide_list[3], item_y_divide_list[3], label = "Class 4")
+#plt.scatter(item_x_divide_list[1], item_y_divide_list[1], label = "Class 2")
+#plt.scatter(item_x_divide_list[2], item_y_divide_list[2], label = "Class 3")
+plt.scatter(item_x_divide_list[3], item_y_divide_list[3], label = "Class 2")
 plt.title("XoY")
 plt.legend(loc = "upper center")
 plt.savefig(plt_file)
 plt.close()
 
 ## XOZ
-plt_file = artificial_data_plot_path + "XoZ_plot.png"
+plt_file = artificial_data_plot_path + "XoZ_plot" + str(DATE) + ".png"
 plt.scatter(item_x_divide_list[0], item_z_divide_list[0], label = "Class 1")
-plt.scatter(item_x_divide_list[1], item_z_divide_list[1], label = "Class 2")
-plt.scatter(item_x_divide_list[2], item_z_divide_list[2], label = "Class 3")
-plt.scatter(item_x_divide_list[3], item_z_divide_list[3], label = "Class 4")
+#plt.scatter(item_x_divide_list[1], item_z_divide_list[1], label = "Class 2")
+#plt.scatter(item_x_divide_list[2], item_z_divide_list[2], label = "Class 3")
+plt.scatter(item_x_divide_list[3], item_z_divide_list[3], label = "Class 2")
 plt.title("XoZ")
 plt.legend(loc = "upper center")
 plt.savefig(plt_file)
 plt.close()
 
 ## YoZ
-plt_file = artificial_data_plot_path + "YoZ_plot.png"
+plt_file = artificial_data_plot_path + "YoZ_plot." + str(DATE) + ".png"
 plt.scatter(item_y_divide_list[0], item_z_divide_list[0], label = "Class 1")
-plt.scatter(item_y_divide_list[1], item_z_divide_list[1], label = "Class 2")
-plt.scatter(item_y_divide_list[2], item_z_divide_list[2], label = "Class 3")
-plt.scatter(item_y_divide_list[3], item_z_divide_list[3], label = "Class 4")
+#plt.scatter(item_y_divide_list[1], item_z_divide_list[1], label = "Class 2")
+#plt.scatter(item_y_divide_list[2], item_z_divide_list[2], label = "Class 3")
+plt.scatter(item_y_divide_list[3], item_z_divide_list[3], label = "Class 2")
 plt.title("YoZ")
 plt.legend(loc = "upper center")
 plt.savefig(plt_file)
@@ -183,7 +184,7 @@ plt.close()
 
 
 #################### Generate input output files
-data_number = 100
+data_number = 200
 item_number = 64
 class_1_list = range(32)
 class_2_list = range(32,64)
@@ -201,12 +202,12 @@ YOZ_coord_1_coeff = 1
 YOZ_coord_2_coeff = 1
 
 
-extra = "_class_1_4_XoY_XoZ"
+extra = "20190911"
 
 artificial_data_input_csv = "/home/li/torch/artificial_data/artificial_data_" + str(data_number) + str(extra) + "_input.csv"
 artificial_data_output_csv = "/home/li/torch/artificial_data/artificial_data_" + str(data_number) + str(extra) + "_output.csv"
 
-coefficient_log = "/home/li/torch/artificial_data/coefficient_log_" + str(data_number) + ".txt"
+coefficient_log = "/home/li/torch/artificial_data/coefficient_log_20190911" + str(data_number) + ".txt"
 
 data_df = pd.read_csv(artificial_data_path)
 data_info_df = pd.read_csv(artificial_data_info)
@@ -250,8 +251,8 @@ for i in range(data_number):
     ## Group 1
     random_list = random.sample(class_1_list, 8)
     group1_list = random_list
-    c1_coord_list = XOY_c1_coord_list
-    c2_coord_list = XOY_c2_coord_list
+    c1_coord_list = YOZ_c1_coord_list
+    c2_coord_list = YOZ_c2_coord_list
 
     coord_list = []
     for rand in random_list:
@@ -286,8 +287,8 @@ for i in range(data_number):
     ## Group 2
     random_list = random.sample(class_4_list, 8)
     group2_list = random_list
-    c1_coord_list = YOZ_c1_coord_list
-    c2_coord_list = YOZ_c2_coord_list
+    c1_coord_list = XOZ_c1_coord_list
+    c2_coord_list = XOZ_c2_coord_list
 
     coord_list = []
     for rand in random_list:
@@ -323,8 +324,8 @@ for i in range(data_number):
     random_list_1 = random.sample(group1_list,4)
     random_list_2 = random.sample(group2_list,4)
     random_list = random_list_1 + random_list_2
-    c1_coord_list = XOZ_c1_coord_list
-    c2_coord_list = XOZ_c2_coord_list
+    c1_coord_list = XOY_c1_coord_list
+    c2_coord_list = XOY_c2_coord_list
     input_array = []
     for j in range(len(class_list)):
         if class_list[j] in random_list:
