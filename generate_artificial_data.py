@@ -207,7 +207,7 @@ extra = "20190911"
 artificial_data_input_csv = "/home/li/torch/artificial_data/artificial_data_" + str(data_number) + str(extra) + "_input.csv"
 artificial_data_output_csv = "/home/li/torch/artificial_data/artificial_data_" + str(data_number) + str(extra) + "_output.csv"
 
-coefficient_log = "/home/li/torch/artificial_data/coefficient_log_20190911" + str(data_number) + ".txt"
+coefficient_log = "/home/li/torch/artificial_data/coefficient_log_20190911_" + str(data_number) + ".txt"
 
 data_df = pd.read_csv(artificial_data_path)
 data_info_df = pd.read_csv(artificial_data_info)

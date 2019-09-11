@@ -28,6 +28,8 @@ from neural_network import Attention_Net
 from neural_network import Linear_Net
 from datasets import GlobalModelDataset
 
+import sklearn
+from sklearn.decomposition import PCA
 
 
 ########### FUNCTIONS
@@ -233,7 +235,7 @@ BATCH_SIZE = 10
 LEARNING_RATE = 0.05
 WEIGHT_DECAY = torch.tensor(0.000001).float()
 QUERY_DIM = 9
-KEY_DIM = 3
+KEY_DIM = 6
 FEATURE_DIM = 5
 EPOCH = 10000
 MOMENTUM = 0.9
@@ -254,25 +256,26 @@ if __name__ == '__main__':
     ############## Data Preparation ###################
     username = "artificial"
 
-    extra = "LI_Mofei_Data_200_R_1_NL_00_LogF_True_epoch_" + str(EPOCH)
-    #extra = "Artificial_Data_LogF_True_epoch_" + str(EPOCH)
+    #extra = "LI_Mofei_Data_200_R_1_NL_00_LogF_True_epoch_" + str(EPOCH)
+    extra = "Artificial_Data_LogF_True_epoch_" + str(EPOCH)
     model_path = "/home/li/torch/model/" + str(extra) + "_" +  str(NET) + "_u_" + str(username) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_ACT_" + str(ACT) + "_WD_" + str(WD) + "_CV.model" 
     train_log_path = "/home/li/torch/model/train_log/"  + str(NET) + "_u_" + str(username) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_ACT_" + str(ACT) + "_WD_" + str(WD) + ".txt" 
 
-    input_csv = "/home/li/torch/data/Data_Input_200_LI_Mofei_20190518.csv"
-    output_csv = "/home/li/torch/data/Data_Output_200_LI_Mofei_20190518.csv"
+    #input_csv = "/home/li/torch/data/Data_Input_200_LI_Mofei_20190518.csv"
+    #output_csv = "/home/li/torch/data/Data_Output_200_LI_Mofei_20190518.csv"
 
-    #input_csv = "/home/li/torch/artificial_data/artificial_data_200_class_1_4_XoY_XoZ_input.csv"
-    #output_csv = "/home/li/torch/artificial_data/artificial_data_200_class_1_4_XoY_XoZ_output.csv"
+    input_csv = "/home/li/torch/artificial_data/artificial_data_200_20190911_input.csv"
+    output_csv = "/home/li/torch/artificial_data/artificial_data_200_20190911_output.csv"
     dataset = GlobalModelDataset(input_csv, output_csv, log_function = True)
 
-    plot_path = "/home/li/torch/plot/20190710/"
+    print(dataset.data_num)
+    plot_path = "/home/li/torch/plot/20190911/"
 
-    eva_extra = "LogF_True_NL_00_li_mofei"
-    #eva_extra = "LogF_True_Artificial_epoch_" + str(EPOCH)
-    evaluation_path = "/home/li/torch/evaluation/datanumber_200_K_" + str(KEY_DIM) + "_" + str(REG) + str(eva_extra) + "/"
-    coeff_path = "/home/li/torch/artificial_data/coefficient_logF_True_LI_Mofei_200_NL_00_test_" + str(NET) + "_epoch_" + str(EPOCH) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_WD_" + str(WD) + ".txt"
-    #coeff_path = "/home/li/torch/artificial_data/coefficient_logF_True_" + str(NET) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_WD_" + str(WD) + "_EPOCH_" + str(EPOCH) + ".txt"
+    #eva_extra = "LogF_True_NL_00_li_mofei"
+    eva_extra = "LogF_True_Artificial_epoch_" + str(EPOCH)
+    evaluation_path = "/home/li/torch/evaluation/datanumber_600_K_" + str(KEY_DIM) + "_" + str(REG) + str(eva_extra) + "/"
+    #coeff_path = "/home/li/torch/artificial_data/coefficient_logF_True_LI_Mofei_200_NL_00_test_" + str(NET) + "_epoch_" + str(EPOCH) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_WD_" + str(WD) + ".txt"
+    coeff_path = "/home/li/torch/artificial_data/coefficient_logF_True_" + str(NET) + "_Q_" + str(QUERY_DIM) + "_K_" + str(KEY_DIM) + "_F_" + str(FEATURE_DIM) + "_REG_" + str(REG) + "_WD_" + str(WD) + "_EPOCH_" + str(EPOCH) + ".txt"
 
     if not os.path.exists(evaluation_path):
         os.mkdir(evaluation_path)
@@ -470,7 +473,7 @@ if __name__ == '__main__':
     d22_star_list = []
     d12_star_list = []
 
-    distribution_list = []
+    dist_list = []
     
 
     for i in range(TEST_NUMBER):
@@ -495,6 +498,7 @@ if __name__ == '__main__':
         d11_list.append(d11)
         #pos = embedding.fit_transform(output_matrix)
         dist = list(dist[0].detach().numpy())
+        dist_list.append(dist)
 
         csv_path = evaluation_path + "group1_test" + str(i) + ".csv"
         if i % 10 == 0:
@@ -526,6 +530,7 @@ if __name__ == '__main__':
         d22_list.append(d22)
         #pos = embedding.fit_transform(output_matrix)
         dist = list(dist[0].detach().numpy())
+        dist_list.append(dist)
 
         csv_path = evaluation_path + "group2_test" + str(i) + ".csv"
         if i % 10 == 0:
@@ -566,6 +571,7 @@ if __name__ == '__main__':
         d12_star_list.append(d12_star)
 
         dist = list(dist[0].detach().numpy())
+        dist_list.append(dist)
 
         csv_path = evaluation_path + "group3_test" + str(i) + ".csv"
         if i % 10 == 0:
@@ -595,6 +601,22 @@ if __name__ == '__main__':
     info2 = "c2: " + str(c2)
     info3 = "c3: " + str(c3)
     info4 = "Entropy: " + str(entropy)
+
+    ############## PCA
+    pca = PCA(n_components = "mle")
+    pca.fit(dist_list)
+    feature = pca.transform(dist_list)
+    print(pca.explained_variance_ratio_)
+    
+    figure = "PCA_Test"
+    plt_file = plot_path + str(extra) + "_" + str(figure) + ".png"
+    plt.scatter(feature[:,0], feature[:,1])
+    plt.grid()
+    #plt.xlim(-1,1)
+    #plt.ylim(-1,1)
+    plt.savefig(plt_file)
+    plt.close('all')
+
  
     with open(coeff_path, "w") as log_f:
         log_f.write(info0 + "\r\n")
@@ -605,6 +627,7 @@ if __name__ == '__main__':
         log_f.write(info2 + "\r\n")
         log_f.write(info3 + "\r\n")
         log_f.write(info4 + "\r\n")
+        log_f.write("Variance Ratio:" + str(pca.explained_variance_ratio_) + "\r\n")
 
 
     
